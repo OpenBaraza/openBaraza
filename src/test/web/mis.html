@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8"/>
+	<title>Test table</title>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta content="width=device-width, initial-scale=1" name="viewport"/>
+	<meta content="Open Baraza Framework" name="description"/>
+	<meta content="Open Baraza" name="author"/>
+
+	<link href="assets/tabulator/css/tabulator.min.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div id="fare-table"></div>
+
+
+<script type="text/javascript" src="assets/tabulator/js/tabulator.min.js"></script>
+<script>
+
+	var tableData = [
+	{id:0, Passanger:"Dennis Gichangi", Currency:"KES", Filed_Fare:20000, Markup_Fee:2000, Service_Fee:1000, IPP:500, Quoted_Fare:23500},
+	{id:1, Passanger:"Esther Wachira", Currency:"KES", Filed_Fare:20000, Markup_Fee:2000, Service_Fee:1000, IPP:500, Quoted_Fare:23500},
+	];
+
+	var table = new Tabulator("#fare-table", {
+		data:tableData,           //load row data from array
+		layout:"fitColumns",      //fit columns to width of table
+		responsiveLayout:"hide",  //hide columns that dont fit on the table
+		tooltips:true,            //show tool tips on cells
+		addRowPos:"top",          //when adding a new row, add it to the top of the table
+		history:true,             //allow undo and redo actions on the table
+		pagination:"local",       //paginate the data
+		paginationSize:20,         //allow 7 rows per page of data
+		movableColumns:false,      //allow column order to be changed
+		resizableRows:true,       //allow row order to be changed
+		
+		columns:[                 //define the table columns
+			{title:"Passanger", field:"Passanger"},
+			{title:"Currency", field:"Currency"},
+			{title:"Filed Fare", field:"Filed_Fare", formatter:"money"},
+			{title:"Markup Fee", field:"Markup_Fee", formatter:"money", editor:"input"},
+			{title:"Service Fee", field:"Service_Fee", formatter:"money", editor:"input"},
+			{title:"IPP", field:"IPP", formatter:"money", editor:"input"},
+			{title:"Quoted Fare", field:"Quoted_Fare", formatter:"money", editor:"input"},
+		],
+
+		cellEdited:function(cell){
+			console.log('cell edit');
+			console.log(cell);
+
+			updateTable(cell._cell.row.data.id, cell._cell.column.field, cell._cell.value);
+		},
+	});
+
+	function updateTable(rowId, fieldName, fieldValue) {
+		console.log(rowId);
+		console.log(fieldName);
+		console.log(fieldValue);
+
+		if(fieldName == 'Markup_Fee') {
+			tableData[rowId].Markup_Fee = fieldValue;
+			var newFare = +tableData[rowId].Filed_Fare + +tableData[rowId].Markup_Fee + +tableData[rowId].Service_Fee + +tableData[rowId].IPP;
+			tableData[rowId].Quoted_Fare = newFare;
+		} if(fieldName == 'Service_Fee') {
+			tableData[rowId].Service_Fee = fieldValue;
+			var newFare = +tableData[rowId].Filed_Fare + +tableData[rowId].Markup_Fee + +tableData[rowId].Service_Fee + +tableData[rowId].IPP;
+			tableData[rowId].Quoted_Fare = newFare;
+		} if(fieldName == 'IPP') {
+			tableData[rowId].IPP = fieldValue;
+			var newFare = +tableData[rowId].Filed_Fare + +tableData[rowId].Markup_Fee + +tableData[rowId].Service_Fee + +tableData[rowId].IPP;
+			tableData[rowId].Quoted_Fare = newFare;
+		} if(fieldName == 'Quoted_Fare') {
+			tableData[rowId].Quoted_Fare = fieldValue;
+			var newMakup = +tableData[rowId].Filed_Fare + +tableData[rowId].Service_Fee + +tableData[rowId].IPP;
+			newMakup = +tableData[rowId].Quoted_Fare - newMakup;
+			tableData[rowId].Markup_Fee = newMakup;
+		}
+
+		table.updateData(tableData);
+	}
+
+</script>
+
+</body>
+</html>
+

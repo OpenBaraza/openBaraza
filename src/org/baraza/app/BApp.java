@@ -94,6 +94,7 @@ public class BApp extends JPanel implements ActionListener, TreeSelectionListene
 		this.dbpath = dbpath;
 		this.configDir = configDir;
 		BXML xml = null;
+		
 		if(encryptionKey == null) {
 			xml = new BXML(configDir + configXmlFile, false);
 		} else {

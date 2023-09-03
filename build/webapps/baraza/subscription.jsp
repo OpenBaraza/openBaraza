@@ -41,28 +41,20 @@
 	if(actionprocess != null) process = "actionProcess";
 	String reportexport = request.getParameter("reportexport");
 	String excelexport = request.getParameter("excelexport");
+	String actionReport = request.getParameter("action_report");
+	if(actionReport != null) process = "actionReport";
 	String actionOp = null;
 
 	String auditTable = null;
-
-	String contentType = request.getContentType();
-	if(contentType != null) {
-		if ((contentType.indexOf("multipart/form-data") >= 0)) {
-			web.updateMultiPart(request, context, context.getRealPath("WEB-INF" + ps + "tmp"));
-		}
-	}
-
 	String opResult = null;
 	if(process != null) {
 		if(process.equals("actionProcess")) {
 			opResult = web.setOperation(actionprocess, request);
+		} else if(process.equals("actionReport")) {
+			opResult = web.setOperation(actionReport, request);
 		} else if(process.equals("FormAction")) {
 			String actionKey = request.getParameter("actionkey");
 			opResult = web.setOperation(actionKey, request);
-		} else if(process.equals("Update")) {
-			web.updateForm(request);
-		} else if(process.equals("Delete")) {
-			web.deleteForm(request);
 		} else if(process.equals("Submit")) {
 			web.submitGrid(request);
 		} else if(process.equals("Check All")) {
@@ -71,7 +63,6 @@
 			auditTable = web.getAudit();
 		}
 	}
-
 	String fieldTitles = web.getFieldTitles();
 
 	if(excelexport != null) reportexport = excelexport;
@@ -97,7 +88,7 @@
 	<meta content="Open Baraza" name="author"/>
 
 	<!-- BEGIN GLOBAL MANDATORY STYLES -->
-	<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css"/>
+	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css"/>
 	<link href="./assets/global/plugins/font-awesome/css/font-awesome.min.css"  rel="stylesheet" type="text/css"/>
 	<link href="./assets/global/plugins/simple-line-icons/simple-line-icons.min.css" rel="stylesheet" type="text/css"/>
 	<link href="./assets/global/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
@@ -223,7 +214,7 @@
 		<div class="page-content">
 
 			<!-- BEGIN PAGE CONTENT-->
-			<form id="baraza" name="baraza" method="post" action="${mainPage}" data-confirm-send="false" data-ajax="false" <%= web.getEncType() %> >
+			<form id="barazaForm" name="barazaForm" action="${mainPage}" method="post" accept-charset="ISO-8859-1" <%= web.getEncType() %> >
 				<%= web.getHiddenValues() %>
 			<div class="row">
 				<div class="col-md-12" >
@@ -330,7 +321,7 @@
 <!-- BEGIN FOOTER -->
 <div class="page-footer">
 	<div class="page-footer-inner">
-		2017 &copy; Open Baraza. <a href="http://dewcis.com">Dew Cis Solutions Ltd.</a> All Rights Reserved
+		2022 &copy; openBaraza <a href="http://dewcis.com">Dew Cis Solutions Ltd</a> All Rights Reserved
 	</div>
 	<div class="scroll-to-top">
 		<i class="icon-arrow-up"></i>
@@ -840,42 +831,45 @@ $(function () {
     }).prop('disabled', !$.support.fileInput).parent().addClass($.support.fileInput ? undefined : 'disabled');
 });
 
-<%if(!web.getLicense()) {%>
-
-	$('#licenseApply').click(function(){
-		console.log('BASE 5 : ');
-
-        var orgName = $("#org_name").val();
-        var sysKey = $("#sys_key").val();
-
-        $.post("registerlicense", {org_name: orgName, sys_key: sysKey}, function(data) {
-            if(data.error == true) {
-                toastr['error'](data.msg, "Error");
-            } else if(data.error == false) {
-                toastr['success'](data.msg, "Ok");
-            }
-        }, "JSON");
-	});
-
-<% } %>
-
-<%if(web.hasExpired()) {%>
-
-	$('#renewalApply').click(function() {
-		$.post("ajax?fnct=renew_product", function(data) {
-			if(data.success == 0) {
-				$('#ajax').modal('hide');
-			} else if(data.success == 1){
-				alert(data.message);
-			}
-
-		}, "JSON");
-	});
-
-<% } %>
-
-
 </script>
+
+<%if(web.isForm() || web.isAccordion()) {%>
+<script>
+$(document).ready(function () {
+	
+	$('#barazaForm').submit(function (event) {
+		//stop submit the form, we will post it manually.
+		event.preventDefault();
+
+		// Get data in JSON
+		var form_data = JSON.stringify($("#barazaForm").serializeArray());
+		console.log(form_data);
+
+<% 
+	String viewKey = request.getParameter("view");
+	if(viewKey == null) viewKey = "";
+	else viewKey = "app_key:'" + viewKey + "', ";
+%>
+
+		// disabled the submit button
+		$("#btnFormProcess").prop("disabled", true);
+		
+		$.post('ajaxinsert', {app_xml:'application.xml', <%= viewKey %> form_data:form_data}, function(data) {
+			console.log(data);
+			
+			if(data.error == 0) {
+				if(data.jump) {
+					location.replace(data.jumplink);
+				}
+			} else {
+				toastr['error'](data.msg, "error");
+			}
+		});
+	});
+});
+</script>
+<% } %>
+
 <!-- END JAVASCRIPTS -->
 <%
 	String diaryJSON = "";
@@ -883,9 +877,6 @@ $(function () {
 %>
 <%@ include file="./assets/include/calendar.jsp" %>
 
-<% if(web.hasPasswordChange()) { %>
-	<%@ include file="./assets/include/password_change.jsp" %>
-<% } %>
 </body>
 <!-- END BODY -->
 </html>

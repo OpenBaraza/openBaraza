@@ -127,7 +127,7 @@ var bmcApi = function () {
                         $('#msgAlert').html(msgHTML);
 
                         frmNote.trigger("reset");
-                        $("#frmNote .close").click();
+                        $("#frmNote.close").click();
                         // window.location.reload();
                     },
                     error: function (data) {

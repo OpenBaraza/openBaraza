@@ -232,18 +232,33 @@ public class BDB {
 	public String executeFunction(String mysql, boolean readOnly) {
 		String ans = null;
 
+		Statement st = null;
+		ResultSet rs = null;
 		try {
-			Statement st = db.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-			ResultSet rs = st.executeQuery(mysql);
+			st = db.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+			rs = st.executeQuery(mysql);
 
 			if(rs.next()) ans = rs.getString(1);
-			rs.close();
-			st.close();
 		} catch (SQLException ex) {
 			ans = null;
 			lastErrorMsg = ex.getMessage();
 			log.severe("Database executeFunction error : " + ex);
+		} finally {
+			if (rs != null) {
+				try { rs.close(); } catch (Exception ex) { }
+				rs = null;
+			}
+			if (st != null) {
+				try { st.close(); } catch (Exception ex) { }
+				st = null;
+			}
 		}
+
+		// Close the handles
+		try {
+			if(rs != null) rs.close();
+			if(st != null) st.close();
+		} catch (SQLException ex) {}
 
 		return ans;
 	}
@@ -429,6 +444,7 @@ public class BDB {
 	public JSONArray jsonTable(String myFields, String mySource) {
 		String fields[] = myFields.split(",");
 		String mySql = "SELECT " + myFields + " FROM " + mySource;
+		log.info("JSON SQL : " + mySql);
 
 		JSONArray ans = new JSONArray();
 		try {
@@ -474,6 +490,29 @@ public class BDB {
 			if(rs.next()) {
 				for(String field : fields)
 					ans.put(field.trim(), rs.getString(field.trim()));
+			}
+			rs.close();
+			st.close();
+		} catch (SQLException ex) {
+			log.severe("Database executeFunction error : " + ex);
+		}
+
+		return ans;
+	}
+	
+	public Vector<Map<String, String>> readRecords(String myFields, String mySource) {
+		String fields[] = myFields.split(",");
+		String mySql = "SELECT " + myFields + " FROM " + mySource;
+
+		Vector<Map<String, String>> ans = new Vector<Map<String, String>>();
+		try {
+			Statement st = db.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+			ResultSet rs = st.executeQuery(mySql);
+			while(rs.next()) {
+				Map<String, String> rec = new HashMap<String, String>();
+				for(String field : fields) 
+					rec.put(field.trim(), rs.getString(field.trim()));
+				ans.add(rec);
 			}
 			rs.close();
 			st.close();
@@ -786,8 +825,17 @@ public class BDB {
 	}
 
 	public String insAudit(String tableName, String recordID, String functionType) {
-		String insSql = "INSERT INTO sys_audit_trail (user_id, user_ip, table_name, record_id, change_type) VALUES('";
-		insSql += getUserID() + "', '" + getUserIP() + "', '" + tableName + "', '" + recordID  + "', '" + functionType + "')";
+		String insSql = "INSERT INTO sys_audit_trail (user_id, user_ip, table_name, record_id, change_type) VALUES('"
+			+ getUserID() + "', '" + getUserIP() + "', '" + tableName + "', '"
+			+ recordID  + "', '" + functionType + "')";
+		String autoKeyID = executeAutoKey(insSql);
+		return autoKeyID;
+	}
+
+	public String insAudit(String tableName, String recordID, String functionType, BUser qUser) {
+		String insSql = "INSERT INTO sys_audit_trail (user_id, user_ip, table_name, record_id, change_type) VALUES('"
+			+ qUser.getUserID() + "', '" + qUser.getUserIP() + "', '" + tableName
+			+ "', '" + recordID  + "', '" + functionType + "')";
 		String autoKeyID = executeAutoKey(insSql);
 		return autoKeyID;
 	}
@@ -1109,7 +1157,8 @@ public class BDB {
 
 	public String getLastErrorMsg() {
 		String lemsg = null;
-		if(lastErrorMsg != null) lemsg = lastErrorMsg.substring(0, lastErrorMsg.indexOf("Where: PL/pgSQL"));
+		int lemPos = lastErrorMsg.indexOf("Where: PL/pgSQL");
+		if((lastErrorMsg != null) && (lemPos > 0)) lemsg = lastErrorMsg.substring(0, lemPos);
 		return lemsg; 
 	}
 	

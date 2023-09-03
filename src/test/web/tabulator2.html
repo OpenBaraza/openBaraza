@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8"/>
+	<title>Test table</title>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta content="width=device-width, initial-scale=1" name="viewport"/>
+	<meta content="Open Baraza Framework" name="description"/>
+	<meta content="Open Baraza" name="author"/>
+
+	<link href="./assets/global/plugins/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css"/>
+	<link href="./assets/tabulator/css/tabulator.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+<div>
+    <p>Tabulator Grid testing</p>
+</div>
+
+<div id="example-table"></div>
+
+
+<script type="text/javascript" src="./assets/global/plugins/jquery.min.js"></script>
+<script type="text/javascript" src="./assets/global/plugins/moment.min.js"></script>
+
+<script type="text/javascript" src="./assets/tabulator/js/tabulator.min.js"></script>
+<script type="text/javascript" src="./assets/tabulator/js/tabulator_custom.js"></script>
+
+<script>
+
+	//define some sample data
+	var tableData = [
+		{id:1, name:"Oli Bob", amount:"12", col:"red", dob:"", item:"1"},
+		{id:2, name:"Mary May", amount:"1", col:"blue", dob:"14/05/1982", item:"2"},
+		{id:3, name:"Christine Lobowski", amount:"42", col:"green", dob:"22/05/1982", item:"2"},
+		{id:4, name:"Brendon Philips", amount:"125", col:"orange", dob:"01/08/1980", item:"3"},
+		{id:5, name:"Margret Marmajuke", amount:"16", col:"yellow", dob:"31/01/1999", item:"3"},
+	];
+
+	var selectData = {"1":"Steve Boberson", "2":"Bob Jimmerson", "3":"Jim Stevenson"};
+	var selectAmount = {"1":"20", "2":"30", "3":"50"};
+
+
+	//create Tabulator on DOM element with id "example-table"
+	var table = new Tabulator("#example-table", {
+	 	data: tableData,
+	 	layout: "fitColumns",
+	 	columns: [
+		 	{title:"Name", field:"name", width:200, headerSort:false, editor:"input"},
+		 	{title:"Amount", field:"amount", width:100, headerSort:false, editor:"input"},
+		 	{title:"Favourite Color", field:"col", headerSort:false},
+		 	{title:"Date Of Birth", field:"dob", sorter:"date", hozAlign:"center", editor:dateEditor, headerSort:false },
+		 	{title:"Items", field:"item", formatter:"lookup", formatterParams: selectData, editor:"select", editorParams:{values:selectData}},
+			{headerSort:false, formatter:cellFnctIcon, width:50, align:"center", titleFormatter:menuTitleFormatter, 
+				headerClick:headerClick, cellClick:cellClick},
+	 	],
+
+	 	rowClick:function(e, row){
+			if(newRow === true) {
+				console.log("New Cell Click");
+			} else {
+	 			console.log("Row " + row.getData().id + " Clicked!!!!");
+			}
+	 	},
+
+		cellEdited:function(cell){
+			var myval = cell.getValue();
+			var myrow = cell.getRow();
+			var mydata = {amount:"20"};
+		
+			mydata.amount = selectAmount[myval];
+
+			myrow.update(mydata);
+
+			console.log('cell edit');
+		},
+	});
+
+
+	function cellClick(e, cell) {
+		console.log("BASE 2030");
+	}
+
+</script>
+
+</body>
+</html>
+

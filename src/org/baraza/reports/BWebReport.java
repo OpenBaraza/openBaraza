@@ -18,12 +18,12 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRRuntimeException;
@@ -93,6 +93,7 @@ public class BWebReport  {
 			System.out.println(rSql);
 			rSql = db.executeFunction(rSql);
 			if(rSql != null) reportfile = rSql;
+			System.out.println(reportfile);
 		}
 
 		if(view.getElementByName("ACTIONS") != null) actions = view.getElementByName("ACTIONS");
@@ -123,6 +124,12 @@ public class BWebReport  {
 			parameters.put("organd", user.getOrgAnd(orgTable));
 			parameters.put("deptand", user.getDeptSql(orgTable));
 			parameters.put("depland", user.getDeplSql(orgTable));
+
+			if(user.getLogoPath() == null) {
+				parameters.put("LOGO_PATH", reportFile.getParent() + "/");
+			} else {
+				parameters.put("LOGO_PATH", user.getLogoPath());
+			}
 			
 			//System.out.println(user.getDeptSql(orgTable));
 			//System.out.println(user.getDeplSql(orgTable));
@@ -190,14 +197,15 @@ public class BWebReport  {
 			if(footerButtons) {
 				sbuffer.append("<div id='reportfooter'>\n");
 				sbuffer.append("<table style='width: 597px; border-collapse: collapse'><tr>\n");
+				sbuffer.append("<td width='55'><button class='i_pdf_document icon' name='reportexport' type='submit' value='pdf'>Pdf</button></td>\n");
 				sbuffer.append("<td width='55'><button class='i_triangle_double_left icon' name='reportmove' type='submit' value='<<'>First</button></td>\n");
 				sbuffer.append("<td width='55'><button class='i_triangle_left icon' name='reportmove' type='submit' value='<'>Previous</button></td>\n");
 				sbuffer.append("<td width='155'>Page :" + Integer.toString(pageIndex+1) + " of " + Integer.toString(lastPageIndex+1) + "</td>\n");
 				sbuffer.append("<input name='page' type='hidden' value='" + Integer.toString(pageIndex) + "'/>\n");
+
 				sbuffer.append("<td width='55'><button class='i_triangle_right icon' name='reportmove' type='submit' value='>'>Next</button></td>\n");
 				sbuffer.append("<td width='55'><button class='i_triangle_double_right icon' name='reportmove' type='submit' value='>>'>Last</button></td>\n");
 				sbuffer.append("<td width='55'><button class='i_excel_document icon' name='reportexport' type='submit' value='excel'>Excel</button></td>\n");
-				sbuffer.append("<td width='55'><button class='i_pdf_document icon' name='reportexport' type='submit' value='pdf'>Pdf</button></td>\n");
 				if(showDoc) {
 					sbuffer.append("<td width='55'><button class='i_doc_document icon' name='reportexport' type='submit' value='doc'>Doc</button></td>\n");
 				}
@@ -238,6 +246,12 @@ public class BWebReport  {
 
 			parameters.put("reportpath", reportFile.getParent() + "/");
 			parameters.put("SUBREPORT_DIR", reportFile.getParent() + "/");
+
+			if(user.getLogoPath() == null) {
+				parameters.put("LOGO_PATH", reportFile.getParent() + "/");
+			} else {
+				parameters.put("LOGO_PATH", user.getLogoPath());
+			}
 
 			parameters.put("orgid", db.getOrgID());
 			parameters.put("orgwhere", user.getOrgWhere(orgTable));
@@ -316,13 +330,10 @@ public class BWebReport  {
 		}
 	}
 	
-	public void getAppReport(BDB db, BUser user, HttpServletRequest request, HttpServletResponse response, int reportType) {
+	public void getAppReport(BDB db, BUser user, HttpServletRequest request, HttpServletResponse response, String reportPath, int reportType) {
 		try {
-			HttpSession session = request.getSession(true);
-			reportfile = (String)session.getAttribute("reportfile");
-			name = (String)session.getAttribute("reportname");
-
-			File reportFile = new File(reportfile);
+		
+			File reportFile = new File(reportPath + reportfile);
 			if (!reportFile.exists()) {
 				log.severe("Report access error : " + reportfile);
 				return;
@@ -332,6 +343,12 @@ public class BWebReport  {
 			parameters.put("reportpath", reportFile.getParent() + "/");
 			parameters.put("SUBREPORT_DIR", reportFile.getParent() + "/");
 
+			if(user.getLogoPath() == null) {
+				parameters.put("LOGO_PATH", reportFile.getParent() + "/");
+			} else {
+				parameters.put("LOGO_PATH", user.getLogoPath());
+			}
+
 			parameters.put("orgid", db.getOrgID());
 			parameters.put("orgwhere", user.getOrgWhere(orgTable));
 			parameters.put("organd", user.getOrgAnd(orgTable));
@@ -339,9 +356,6 @@ public class BWebReport  {
 			parameters.put("entityname", user.getUserName());
 			parameters.put("deptand", user.getDeptSql(orgTable));
 			parameters.put("depland", user.getDeplSql(orgTable));
-
-			// set the session parameters
-			//setParams(session);
 		
 			String linkData = request.getParameter("linkdata");
 			if ((linkField != null) && (linkData != null)) {
@@ -415,6 +429,12 @@ public class BWebReport  {
 
 			parameters.put("reportpath", reportPath);
 			parameters.put("SUBREPORT_DIR", reportPath);
+
+			if(user.getLogoPath() == null) {
+				parameters.put("LOGO_PATH", reportFile.getParent() + "/");
+			} else {
+				parameters.put("LOGO_PATH", user.getLogoPath());
+			}
 
 			parameters.put("orgid", db.getOrgID());
 			parameters.put("orgwhere", user.getOrgWhere(orgTable));

@@ -15,11 +15,13 @@ import java.util.Map;
 import java.util.Enumeration;
 import java.util.logging.Logger;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
 
 import org.baraza.utils.BWebUtils;
 import org.baraza.xml.BXML;
@@ -30,8 +32,16 @@ import org.baraza.DB.BJSONQuery;
 public class BJSONData extends HttpServlet {
 	Logger log = Logger.getLogger(BJSONData.class.getName());
 	
+	BDB db = null;
+	
 	// The search data  has to be ordered alphabetically
 	String[] deskTypes = {"ACCORDION", "CROSSTAB", "DIARY", "DIARYEDIT", "FILES", "FILTER", "FORMVIEW", "GRID", "SEARCH", "TABLEVIEW"};
+	
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		
+		db = new BDB("java:/comp/env/jdbc/database");
+	}
 
 	public void doPost(HttpServletRequest request, HttpServletResponse response)  {
 		doGet(request, response);
@@ -98,12 +108,12 @@ public class BJSONData extends HttpServlet {
 
 		String pageNum = request.getParameter("page");
 		if(pageNum == null) pageNum = "0";
-		Integer pageStart = new Integer(0);
-		Integer pageSize = new Integer(0);
+		Integer pageStart = Integer.valueOf(0);
+		Integer pageSize = Integer.valueOf(0);
 		try {
-			if(request.getParameter("rows") == null) pageSize = new Integer(30);
-			else pageSize = new Integer(request.getParameter("rows"));
-			pageStart = new Integer(pageNum) * pageSize;
+			if(request.getParameter("rows") == null) pageSize = Integer.valueOf(30);
+			else pageSize = Integer.valueOf(request.getParameter("rows"));
+			pageStart = Integer.valueOf(pageNum) * pageSize;
 		} catch(NumberFormatException ex) { 
 			log.severe("Page size error " + ex);
 		}
@@ -126,7 +136,20 @@ public class BJSONData extends HttpServlet {
 		}
 		
 		if(secured) {
-			BJSONQuery JSONQuery = new BJSONQuery(web.getDB(), view, whereSql, sortBy, pageStart, pageSize);
+			if(!db.isValid()) db.reconnect("java:/comp/env/jdbc/database");
+			db.setOrgID(web.getRoot().getAttribute("org"));
+			db.setUser(request.getRemoteAddr(), request.getRemoteUser());
+			
+			BElement root = web.getRoot();
+			if(root.getAttribute("auth.table") != null) {
+				String userName = request.getRemoteUser();
+				String authTable = root.getAttribute("auth.table");
+				String authId = root.getAttribute("auth.id");
+				String authName = root.getAttribute("auth.name");
+				db.setUser(authTable, authId, authName, userName);
+			}
+		
+			BJSONQuery JSONQuery = new BJSONQuery(db, view, whereSql, sortBy, pageStart, pageSize);
 			JSONStr = JSONQuery.getJSONData(viewKey, false);
 			JSONQuery.close();
 		}
@@ -156,10 +179,16 @@ public class BJSONData extends HttpServlet {
 			if(view == null) return JSONStr;
 			if(Arrays.binarySearch(deskTypes, view.getName()) < 0) return JSONStr;
 			
-			String dbConfig = "java:/comp/env/jdbc/database";
-			BDB db = new BDB(dbConfig);
+			if(!db.isValid()) db.reconnect("java:/comp/env/jdbc/database");
 			db.setOrgID(root.getAttribute("org"));
 			db.setUser(request.getRemoteAddr(), request.getRemoteUser());
+			if(root.getAttribute("auth.table") != null) {
+				String userName = request.getRemoteUser();
+				String authTable = root.getAttribute("auth.table");
+				String authId = root.getAttribute("auth.id");
+				String authName = root.getAttribute("auth.name");
+				db.setUser(authTable, authId, authName, userName);
+			}
 			
 			boolean notSecure = false;
 			if(db.getUser() == null) {
@@ -174,8 +203,8 @@ public class BJSONData extends HttpServlet {
 			String whereSql = request.getParameter("where");
 			String sortBy = request.getParameter("sortby");
 			String linkData = request.getParameter("linkdata");
-			Integer pageStart = new Integer(0);
-			Integer pageSize = new Integer(0);
+			Integer pageStart = Integer.valueOf(0);
+			Integer pageSize = Integer.valueOf(0);
 			
 			if(linkData == null) {
 				String linkSN = "L" + viewKey;
@@ -187,6 +216,9 @@ public class BJSONData extends HttpServlet {
 			if((view.getAttribute("linkfield") != null) && (linkData != null)){
 				if(whereSql == null) whereSql = "(" + view.getAttribute("linkfield") + " = '" + linkData + "')";
 				else whereSql += " AND (" + view.getAttribute("linkfield") + " = '" + linkData + "')";
+			} else if((view.getAttribute("linkfield") != null) && (linkData == null)){
+				if(whereSql == null) whereSql = "(" + view.getAttribute("linkfield") + " is null)";
+				else whereSql += " AND (" + view.getAttribute("linkfield") + " is null)";
 			}
 //System.out.println("JSON Where :" + whereSql);
 
@@ -196,8 +228,6 @@ public class BJSONData extends HttpServlet {
 			BJSONQuery JSONQuery = new BJSONQuery(db, view, whereSql, sortBy, pageStart, pageSize);
 			JSONStr = JSONQuery.getJSONData(viewKey, false);
 			JSONQuery.close();
-			
-			db.close();
 		}
 
 		return JSONStr;

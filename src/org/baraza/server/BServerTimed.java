@@ -105,31 +105,35 @@ public class BServerTimed extends Thread {
 
 	public void run() {
 		while (listening) {
+		
+			if(!db.isValid()) db.reconnect();
 
-			if(escalation != null) {
-				if(!escalation.isExecuting()) delay = escalation.process();
-			}
-			if(data != null) {
-				if(!data.isExecuting()) delay = data.process();
-			}
-			if(kannel != null) {
-				if(!kannel.isExecuting()) delay = kannel.process();
-			}
-			if(sms != null) delay = sms.process();
-			if(export != null) delay = export.process();
-			if(deploy != null) delay = deploy.process();
-			if(reportFile != null) delay = reportFile.process();
-			if(sqlcron != null) delay = sqlcron.process();
-			if(smsModem != null) {
-				if(!smsModem.isRunning()) {
-					delay = smsModem.getDelay();
-					if(!smsModem.isConnected()) {
-						log.info("SMS System attempting a restart");
-						smsModem = new BSMSModem(db, root, logHandle);
+			if(db.isValid()) {
+				if(escalation != null) {
+					if(!escalation.isExecuting()) delay = escalation.process();
+				}
+				if(data != null) {
+					if(!data.isExecuting()) delay = data.process();
+				}
+				if(kannel != null) {
+					if(!kannel.isExecuting()) delay = kannel.process();
+				}
+				if(sms != null) delay = sms.process();
+				if(export != null) delay = export.process();
+				if(deploy != null) delay = deploy.process();
+				if(reportFile != null) delay = reportFile.process();
+				if(sqlcron != null) delay = sqlcron.process();
+				if(smsModem != null) {
+					if(!smsModem.isRunning()) {
+						delay = smsModem.getDelay();
+						if(!smsModem.isConnected()) {
+							log.info("SMS System attempting a restart");
+							smsModem = new BSMSModem(db, root, logHandle);
+						}
 					}
 				}
 			}
-
+			
 			try {
 				sleep(delay);
 			} catch(InterruptedException ex) {

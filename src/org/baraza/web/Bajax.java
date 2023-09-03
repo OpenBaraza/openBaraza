@@ -26,13 +26,13 @@ import java.io.IOException;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletConfig;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
 
 import org.baraza.xml.BXML;
 import org.baraza.xml.BElement;
@@ -66,12 +66,11 @@ public class Bajax extends HttpServlet {
 		web = new BWeb(getServletContext(), request);
 		db = web.getDB();
 		
+		System.out.println("AJAX Reached : " + request.getServletPath() + " : " + request.getParameter("fnct"));
+		
 		BWebUtils.showParameters(request);
 		
-		System.out.println("AJAX Reached : " + request.getParameter("fnct"));
-		
 		String sp = request.getServletPath();
-		
 		String function = request.getParameter("ajaxfunction");			// function to execute
 		String params = request.getParameter("ajaxparams");				// function params
 		String from = request.getParameter("from");						// from function
@@ -90,18 +89,21 @@ public class Bajax extends HttpServlet {
 			if("edit".equals(request.getParameter("oper"))) {
 				resp = updateGrid(request);
 				response.setContentType("text/html");
+			} else if("form".equals(request.getParameter("oper"))) {
+				resp = updateFormData(request);
+			} else if("delete".equals(request.getParameter("oper"))) {
+				resp = deleteFormData(request);
+			} else if("formupdate".equals(fnct)) {
+				BWebForms webForm = new BWebForms(db);
+				resp = resp = webForm.updateForm(request.getParameter("entry_form_id"), request.getParameter("json"));
+			} else if("formsubmit".equals(fnct)) {
+				BWebForms webForm = new BWebForms(db);
+				resp = webForm.submitForm(request.getParameter("entry_form_id"), request.getParameter("json"));
 			}
 		} else if(sp.equals("/ajaxinsert")) {
 			resp = addFormData(request);
 		} else if((function != null) && (params != null)) {
 			resp = executeSQLFxn(function, params, from);
-			response.setContentType("text/html");
-		} else if("formupdate".equals(fnct)) {
-			BWebForms webForm = new BWebForms(db);
-			resp = resp = webForm.updateForm(request.getParameter("entry_form_id"), request.getParameter("json"));
-		} else if("formsubmit".equals(fnct)) {
-			BWebForms webForm = new BWebForms(db);
-			resp = webForm.submitForm(request.getParameter("entry_form_id"), request.getParameter("json"));
 		} else if("caladd".equals(fnct)) {
 			String keyId = request.getParameter("keyId");
 			resp = calAdd(keyId, startDate, endDate);
@@ -195,8 +197,15 @@ public class Bajax extends HttpServlet {
 		String appXml = request.getParameter("app_xml");
 		String appKey = request.getParameter("app_key");
 		String formData = request.getParameter("form_data");
+		if(appKey == null) {
+			appKey = request.getParameter("view");
+			if(appKey == null) appKey = "1:0";
+		}
 		
-		JSONArray jaFormData = new JSONArray(formData);
+		String body = BWebUtils.requestBody(request);
+		if(formData == null) formData = body;
+		System.out.println("JSON +" + formData + "+");
+		
 		BXML xml = new BXML(xmlBase + appXml, false);
 		
 		jResp.put("error", 1);
@@ -205,6 +214,10 @@ public class Bajax extends HttpServlet {
 		if(root == null) return jResp.toString();
 		BElement view = root.getView(appKey);
 		if(view == null) return jResp.toString();
+		if(formData == null) return jResp.toString();
+		if(!view.getAttribute("secured", "false").equals("true")) return jResp.toString();
+
+		JSONArray jaFormData = new JSONArray(formData);
 		
 		BQuery rs = new BQuery(db, view, null, null, false);
 		if(rs == null) return jResp.toString();
@@ -212,12 +225,21 @@ public class Bajax extends HttpServlet {
 		Map<String, String[]> reqParams = new HashMap<String, String[]>();
 		for (int j = 0; j < jaFormData.length(); j++) {
 			JSONObject jVal = jaFormData.getJSONObject(j);
-			String keyStr = jVal.getString("name");
-			System.out.println(keyStr + " : " + jVal.getString("value"));
+			if(jVal.has("name") && jVal.has("value")) {
+				String keyStr = jVal.getString("name");
+				System.out.println(keyStr + " : " + jVal.getString("value"));
+				
+				String[] pArray = new String[1];
+				pArray[0] = jVal.getString("value");
+				reqParams.put(keyStr, pArray);
+			} else {
+				for (String keyName : jVal.keySet()) {
+					String[] pArray = new String[1];
+					pArray[0] = jVal.get(keyName).toString();
+					reqParams.put(keyName, pArray);
+				}
+			}
 			
-			String[] pArray = new String[1];
-			pArray[0] = jVal.getString("value");
-			reqParams.put(keyStr, pArray);
 		}
 		
 		rs.recAdd();
@@ -228,6 +250,26 @@ System.out.println("SAVE : " + saveMsg);
 			jResp.put("error", 0);
 			jResp.put("msg", view.getAttribute("save.msg", "Data updated"));
 			jResp.put("data", rs.getRowJSON());
+
+			String dataItem = rs.getKeyField();
+
+			String jumpView = view.getAttribute("jumpview");
+			BElement fView = view.getElementByName("FORMVIEW");
+			if(jumpView != null) {
+				String viewKey = jumpView;
+				String mydv = "?view=" + viewKey + "&data=" + dataItem;
+
+				jResp.put("jump", true);
+				jResp.put("jumpview", viewKey);
+				jResp.put("jumplink", mydv);
+			} else if(fView != null) {
+				String viewKey = appKey + ":0";
+				String mydv = "?view=" + viewKey + "&data=" + dataItem;
+
+				jResp.put("jump", true);
+				jResp.put("jumpview", viewKey);
+				jResp.put("jumplink", mydv);
+			}
 		} else {
 			jResp.put("error", 2);
 			jResp.put("error_msg", saveMsg);
@@ -236,7 +278,117 @@ System.out.println("SAVE : " + saveMsg);
 		
 		return jResp.toString();
 	}
+	
+	public String updateFormData(HttpServletRequest request) {
+		JSONObject jResp =  new JSONObject();
 		
+		String appXml = request.getParameter("app_xml");
+		String appKey = request.getParameter("app_key");
+		String formData = request.getParameter("form_data");
+		
+		String body = BWebUtils.requestBody(request);
+		if(formData == null) formData = body;
+		System.out.println("JSON +" + formData + "+");
+		
+		BXML xml = new BXML(xmlBase + appXml, false);
+		
+		jResp.put("error", 1);
+		if(xml.getDocument() == null) return jResp.toString();
+		BElement root = xml.getRoot();
+		if(root == null) return jResp.toString();
+		BElement view = root.getView(appKey);
+		if(view == null) return jResp.toString();
+		if(formData == null) return jResp.toString();
+		if(!view.getAttribute("secured", "false").equals("true")) return jResp.toString();
+		
+		JSONArray jaFormData = new JSONArray(formData);
+		for (int j = 0; j < jaFormData.length(); j++) {
+			JSONObject jVal = jaFormData.getJSONObject(j);
+			
+			if(jVal.has("KF")) {
+				String where = "(" + view.getAttribute("keyfield") + " = '" + jVal.getString("KF") + "')";
+				BQuery rs = new BQuery(db, view, where, null);
+				rs.moveFirst();
+				rs.recEdit();
+				
+				Map<String, String[]> reqParams = new HashMap<String, String[]>();
+				for (String keyName : jVal.keySet()) {
+					if(!keyName.equals("KF")) {
+						String[] pArray = new String[1];
+						pArray[0] = jVal.get(keyName).toString();
+						reqParams.put(keyName, pArray);
+					}
+				}
+				
+				String saveMsg = rs.updateFields(reqParams, web.getViewData(), request.getRemoteAddr(), "");
+				System.out.println("SAVE : " + saveMsg);
+				
+				if(saveMsg.trim().equals("")) {
+					jResp.put("error", 0);
+					jResp.put("msg", view.getAttribute("save.msg", "Data updated"));
+					jResp.put("data", rs.getRowJSON());
+				} else {
+					jResp.put("error", 2);
+					jResp.put("error_msg", saveMsg);
+				}
+				rs.close();
+			}
+		}
+		
+		return jResp.toString();
+	}
+
+	public String deleteFormData(HttpServletRequest request) {
+		JSONObject jResp =  new JSONObject();
+		jResp.put("error", 1);
+		jResp.put("msg", "Not deleted, check configuration");
+		
+		String appXml = request.getParameter("app_xml");
+		String appKey = request.getParameter("app_key");
+		String formData = request.getParameter("form_data");
+		
+		String body = BWebUtils.requestBody(request);
+		if(formData == null) formData = body;
+		System.out.println("JSON +" + formData + "+");
+		
+		BXML xml = new BXML(xmlBase + appXml, false);
+		
+		jResp.put("error", 1);
+		if(xml.getDocument() == null) return jResp.toString();
+		BElement root = xml.getRoot();
+		if(root == null) return jResp.toString();
+		BElement view = root.getView(appKey);
+		if(view == null) return jResp.toString();
+		if(formData == null) return jResp.toString();
+		if(!view.getAttribute("secured", "false").equals("true")) return jResp.toString();
+		
+		String delSql = "DELETE FROM " + view.getAttribute("table")
+			+ " WHERE (org_id = " + db.getUserOrgId()
+			+ ") AND (" + view.getAttribute("keyfield") + " = '";
+		
+		JSONArray jaFormData = new JSONArray(formData);
+		for (int j = 0; j < jaFormData.length(); j++) {
+			JSONObject jVal = jaFormData.getJSONObject(j);
+			
+			if(jVal.has("KF")) {
+				String dSql = delSql + jVal.getString("KF") + "')";
+				System.out.println(dSql);
+				
+				String delErr = db.executeUpdate(dSql);
+				
+				if(delErr == null) {
+					jResp.put("error", 0);
+					jResp.put("msg", "Not deleted, check configuration");
+				} else {
+					jResp.put("error", 1);
+					jResp.put("msg", delErr);
+				}
+			}
+		}
+		
+		return jResp.toString();
+	}
+
 	public String calAdd(String keyId, String startDate, String endDate) {
 		BElement view = web.getView();
 
@@ -345,16 +497,27 @@ System.out.println(calId);
 	}
 
 	public String executeSQLFxn(String fxn, String prms, String from) {
-		String query = "";
+		JSONObject jResp = new JSONObject();
+		
+		String getUserID = web.getUserID();
 
-		if(from == null) query = "SELECT " + fxn + "('" + prms + "')";
-		else query = "SELECT " + fxn + "('" + prms + "') from " + from;
+		String query = "";
+		if(from == null) query = "SELECT " + fxn + "('" + getUserID + "', '" + prms + "')";
+		else query = "SELECT " + fxn + "('" + prms + "', '" + getUserID + "') from " + from;
 		System.out.println("SQL function = " + query);
 
 		String str = "";
-		if(!prms.trim().equals("")) str = web.executeFunction(query);
+		if(!prms.trim().equals("")) str = db.executeFunction(query);
+		
+		if(str == null) {
+			jResp.put("success", false);
+			jResp.put("msg", db.getLastErrorMsg());
+		} else {
+			jResp.put("success", true);
+			jResp.put("msg", str);
+		}
 
-		return str;
+		return jResp.toString();
 	}
 
 	public String escapeSQL(String str){				
@@ -397,19 +560,22 @@ System.out.println(calId);
 		String sqlProcess = web.getView().getAttribute("process");
 		String linkData = web.getLinkData();
 
-		String myoutput = null;
+		String dbErr = "";
+		String myOutput = null;
 		if(sqlProcess != null) {
 			String mySql = "SELECT " + sqlProcess + "('" + db.getUserOrg() + "', '" + db.getUserID() + "', '" + linkData + "')";
 			System.out.println("Process Import : " + mySql);
-			myoutput = db.executeFunction(mySql);
+			myOutput = db.executeFunction(mySql);
 			
-			System.out.println("Process Import finised : " + myoutput);
+			if(myOutput == null) dbErr = db.getLastErrorMsg();
+			
+			System.out.println("Process Import finised : " + myOutput);
 		}
 		
-		if(myoutput != null) {
+		if(myOutput != null) {
 			jResp.put("error", false);
 			jResp.put("success", 1);
-			jResp.put("message", "Processing Successfull");
+			jResp.put("message", myOutput);
 		} else if("FILES".equals(web.getView().getName())) {
 			jResp.put("error", false);
 			jResp.put("success", 2);
@@ -417,7 +583,7 @@ System.out.println(calId);
 		} else {
 			jResp.put("error", true);
 			jResp.put("success", 0);
-			jResp.put("message", "Processing has issues");
+			jResp.put("message", "Processing has issues <br>" + dbErr);
 		}
 		
 		return jResp.toString();
@@ -461,7 +627,7 @@ System.out.println(calId);
 		+ "(SELECT 0::real as cr, COALESCE(sum(quantity * price), 0) as dr FROM productions "
 		+ "WHERE (org_id = " + db.getUserOrg() + "))) as a";
 		String bals = db.executeFunction(mysql);
-		Float bal = new Float(bals);
+		Float bal = Float.valueOf(bals);
 		
 		String rSql = "SELECT a.product_id, a.product_name, a.details, a.annual_cost, a.expiry_date, a.sum_quantity "
 		+ "FROM vws_productions a "
@@ -512,7 +678,7 @@ System.out.println(calId);
 		+ "WHERE (org_id = " + db.getUserOrg() + "))) as a";
 		String bals = db.executeFunction(mysql);
 System.out.println("BASE 2020 : " + bals);
-		Float bal = new Float(bals);
+		Float bal = Float.valueOf(bals);
 		
 		mysql = "SELECT product_id, product_name, is_singular, align_expiry, is_montly_bill, "
 		+ "montly_cost, is_annual_bill, annual_cost, details "
@@ -529,7 +695,7 @@ System.out.println("BASE 2020 : " + bals);
 		BQuery rsa = new BQuery(db, mysql);
 		
 		Float annualCost = rs.getFloat("annual_cost");
-		Float buyUnits = new Float(units);
+		Float buyUnits = Float.valueOf(units);
 		Calendar cal = Calendar.getInstance();
 		cal.add(Calendar.YEAR, 1);
 		
@@ -603,7 +769,7 @@ System.out.println("BASE 1025 : " + upSql);
 			jResp.put("error_msg", "No view no");
 			return jResp.toString();
 		}
-		Integer viewNo = new Integer(request.getParameter("viewno"));
+		Integer viewNo = Integer.valueOf(request.getParameter("viewno"));
 		BElement SubView = view.getElement(viewNo);
 		
 		System.out.println("viewno = " + viewNo);

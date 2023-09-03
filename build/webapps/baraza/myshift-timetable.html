@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Shift Timetable</title>
+    <!-- Bootstrap Css -->
+    <link href="./assets/canvas/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css" />
+    <!-- Icons Css -->
+    <link href="assets/canvas/css/icons.min.css" rel="stylesheet" type="text/css" />
+    <!-- App Css-->
+    <link href="assets/canvas/css/app.min.css" id="app-style" rel="stylesheet" type="text/css" />
+    <link href="assets/canvas/css/custom.css" id="app-style" rel="stylesheet" type="text/css" />
+    <link href="assets/canvas/css/shift.css" id="app-style" rel="stylesheet" type="text/css" />
+
+
+    <link href="https://unpkg.com/gijgo@1.9.13/css/gijgo.min.css" rel="stylesheet" type="text/css" />
+    <style>
+
+    </style>
+
+</head>
+
+<body>
+    <div class="wrapper">
+        <div class="top-bar">
+            <div class="row">
+              <div class=" col-md-4 col-sm-12 mb-10 text-left">
+
+                <button class="btn-evin transparent" onclick="back(true)"> 
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="#FFFFFF" fill-rule="evenodd" d="M10.78 19.03a.75.75 0 01-1.06 0l-6.25-6.25a.75.75 0 010-1.06l6.25-6.25a.75.75 0 111.06 1.06L5.81 11.5h14.44a.75.75 0 010 1.5H5.81l4.97 4.97a.75.75 0 010 1.06z"></path>
+                    </svg>
+                    Previous Week
+                </button>
+              </div>
+              <div class=" col-md-4 col-sm-12 mb-10 text-center" >
+                <button class="btn-evin transparent" onclick="current(true)"> 
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+                        <path fill="#FFFFFF" fill-rule="evenodd" d="M13.03 8.22a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06 0L3.47 9.28a.75.75 0 011.06-1.06l2.97 2.97V3.75a.75.75 0 011.5 0v7.44l2.97-2.97a.75.75 0 011.06 0z"></path>
+                    </svg>
+                    Current Week
+                </button>
+              </div>
+              <div class=" col-md-4 col-sm-12 mb-10 text-right" >
+                <button class="btn-evin transparent" onclick="next(true)"> 
+                    Next Week
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="#FFFFFF" fill-rule="evenodd" d="M13.22 19.03a.75.75 0 001.06 0l6.25-6.25a.75.75 0 000-1.06l-6.25-6.25a.75.75 0 10-1.06 1.06l4.97 4.97H3.75a.75.75 0 000 1.5h14.44l-4.97 4.97a.75.75 0 000 1.06z"></path>
+                    </svg>
+                </button>
+              </div>
+            </div>
+        </div>
+
+        <div class="row mb-10">
+            <div class="col-sm-2" > 
+                <div class="dropdown">
+                    <a href="./index.jsp?xml=attendance.xml&view=1:0" class="a-link">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" style="margin-right: 10px;">
+                            <path fill="#172b4d" fill-rule="evenodd" d="M5 3.75C5 2.784 5.784 2 6.75 2h10.5c.966 0 1.75.784 1.75 1.75v17.5a.75.75 0 01-1.218.586L12 17.21l-5.781 4.625A.75.75 0 015 21.25V3.75zm1.75-.25a.25.25 0 00-.25.25v15.94l5.031-4.026a.75.75 0 01.938 0L17.5 19.69V3.75a.25.25 0 00-.25-.25H6.75z"></path>
+                        </svg>
+
+                        Back To Dashboard
+                    </a>
+                
+                </div>
+            </div>
+            <div class="col-sm-3"> 
+                <div class="dropdown">
+                    <a href="#/" class="a-link">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"  style="margin-right: 10px;">
+                            <path fill="#172b4d" fill-rule="evenodd" d="M6.75 0a.75.75 0 01.75.75V3h9V.75a.75.75 0 011.5 0V3h2.75c.966 0 1.75.784 1.75 1.75v16a1.75 1.75 0 01-1.75 1.75H3.25a1.75 1.75 0 01-1.75-1.75v-16C1.5 3.784 2.284 3 3.25 3H6V.75A.75.75 0 016.75 0zm-3.5 4.5a.25.25 0 00-.25.25V8h18V4.75a.25.25 0 00-.25-.25H3.25zM21 9.5H3v11.25c0 .138.112.25.25.25h17.5a.25.25 0 00.25-.25V9.5z"></path>
+                        </svg>
+
+                        <div id="currentWk"></div>
+                    </a>
+                
+                </div>
+            </div>
+        </div>
+
+        <center>
+            <div class="row">
+                <!-- <div class="col-lg-2 col-md-2 col-sm-2 col-xs-12"> -->
+                <div class="col-md-12" id="errorAlert">
+
+                </div>
+                <div class="col-md-2 shift-tb" id="addBounce">
+                    <table border="1" class="sidebar-section sticky-sidebar">
+                        <tr>
+                            <th class="thead-primary">
+                                <center><b> Employees Not Assigned </b></center>
+                            </th>
+                        </tr>
+                        <tr>
+                            <td ondrop="drop(event, this, '0', '0')" ondragover="allowDrop(event)">
+                                <!-- <td class="employees-listing task-list" id="drag1" draggable="true" ondragstart="drag(event, this)"> -->
+                                <!-- Employee Listing Here -->
+                                <div class="employees-listing task-list" id="employee_not_assigned" style="max-height:700px !important;overflow-y: scroll;">
+
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <!-- <div class="col-lg-10 col-md-10 col-sm-10 col-xs-12"> -->
+                <div class="col-md-10 shift-tb">
+                    <input type="hidden" name="week_description" id="week_description" value="" />
+                    <table border="1">
+                        <thead>
+                            <tr>
+                                <th style="width: 10%" class="thead-primary">
+                                    <center>
+                                        <b> Locations </b>
+    
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center>
+                                        <b> Monday </b>
+                                        <br>
+                                        <span id="date_0"> </span>
+                                        <br>
+                                        <span id="current_0" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="current_holiday_0" class="badge badge-success" style="display:none;"></span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Tuesday </b>
+                                        <br>
+                                        <b id="date_1"> </b>
+                                        <br>
+                                        <span id="current_1" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="current_holiday_1" class="badge badge-success" style="display:none;"></span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Wednesday </b>
+                                        <br>
+                                        <b id="date_2"> </b>
+                                        <br>
+                                        <span id="current_2" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="current_holiday_2" class="badge badge-success" style="display:none;"></span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Thursday </b>
+                                        <br>
+                                        <b id="date_3"> </b>
+                                        <br>
+                                        <span id="current_3" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="current_holiday_3" class="badge badge-success" style="display:none;"></span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Friday </b>
+                                        <br>
+                                        <b id="date_4"> </b>
+                                        <br>
+                                        <span id="current_4" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="current_holiday_4" class="badge badge-success" style="display:none;"></span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Saturday </b>
+                                        <br>
+                                        <b id="date_5"> </b>
+                                        <br>
+                                        <span id="current_5" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="current_holiday_5" class="badge badge-success" style="display:none;"></span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Sunday </b>
+                                        <br>
+                                        <b id="date_6"> </b>
+                                        <br>
+                                        <span id="current_6" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="current_holiday_6" class="badge badge-success" style="display:none;"></span>
+                                    </center>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="offices">
+    
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th style="width: 10%" class="thead-primary">
+                                    <center>
+                                        <b> Locations </b>
+    
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center>
+                                        <b> Monday </b>
+                                        <br>
+                                        <span id="tfoot_date_0"> </span>
+                                        <br>
+                                        <span id="tfoot_current_0" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="tfoot_holiday_0" class="badge badge-success" style="display:none;"> </span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Tuesday </b>
+                                        <br>
+                                        <b id="tfoot_date_1"> </b>
+                                        <br>
+                                        <span id="tfoot_current_1" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="tfoot_holiday_1" class="badge badge-success" style="display:none;"> </span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Wednesday </b>
+                                        <br>
+                                        <b id="tfoot_date_2"> </b>
+                                        <br>
+                                        <span id="tfoot_current_2" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="tfoot_holiday_2" class="badge badge-success" style="display:none;"> </span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Thursday </b>
+                                        <br>
+                                        <b id="tfoot_date_3"> </b>
+                                        <br>
+                                        <span id="tfoot_current_3" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="tfoot_holiday_3" class="badge badge-success" style="display:none;"> </span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Friday </b>
+                                        <br>
+                                        <b id="tfoot_date_4"> </b>
+                                        <br>
+                                        <span id="tfoot_current_4" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="tfoot_holiday_4" class="badge badge-success" style="display:none;"> </span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Saturday </b>
+                                        <br>
+                                        <b id="tfoot_date_5"> </b>
+                                        <br>
+                                        <span id="tfoot_current_5" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="tfoot_holiday_5" class="badge badge-success" style="display:none;"> </span>
+                                    </center>
+                                </th>
+                                <th class="thead-primary">
+                                    <center><b> Sunday </b>
+                                        <br>
+                                        <b id="tfoot_date_6"> </b>
+                                        <br>
+                                        <span id="tfoot_current_6" class="badge badge-warning" style="display:none;"> Today</span>
+                                        <br>
+                                        <span id="tfoot_holiday_6" class="badge badge-success" style="display:none;"> </span>
+                                    </center>
+                                </th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+        </center>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="addCardModal" tabindex="-1" role="dialog" aria-labelledby="addCardModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addModalTitle"></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="frmNote">
+                    <div class="modal-body">
+                        <!-- Message Alert -->
+                        <div id="msgAlert">
+
+                        </div>
+
+                        <div class="form-group">
+                            <label for="from" class="col-form-label">From :</label>
+                            <input type="text" class="form-control" id="from" name="from"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="to" class="col-form-label">To :</label>
+                            <input type="text" class="form-control" id="to" name="to"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="note_content" class="col-form-label">Add Comment:</label>
+                            <textarea class="form-control" id="note_content" name="note_content"></textarea>
+                            <input type="hidden" class="form-control" id="user_id" name="user_id" value="">
+                            <input type="hidden" class="form-control" id="keyfield" name="keyfield" value="">
+                        </div>
+                        <div class="form-group">
+                            <label for="note_content" class="col-form-label">Select Schedule Color: <span id="selected_color"> </span> </label>
+                            <input type="hidden" class="form-control" id="schedule_label" name="schedule_label" value="" />
+                            <div class="note-color-pick">
+                                <!---->
+                                <!---->
+                                <div class="color-square shf-purple" onclick="selectChange('shf-purple')">
+                                </div>
+                                <!---->
+                                <!---->
+                                <!---->
+                                <div class="color-square shf-orange" onclick="selectChange('shf-orange')">
+                                </div>
+                                <!---->
+                                <!---->
+                                <!---->
+                                <div class="color-square shf-green" onclick="selectChange('shf-green')">
+                                </div>
+                                <!---->
+                                <!---->
+                                <!---->
+                                <div class="color-square shf-yellow" onclick="selectChange('shf-yellow')">
+                                </div>
+
+                            </div>
+                        </div>
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary btn-time-update">Update Time</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteCardModal" tabindex="-1" role="dialog" aria-labelledby="deleteCardModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalTitle"></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="frmNote">
+                    <div class="modal-body text-center">
+                        <h1>Unassign User</h1>
+                        <p>Are you sure you want to remove this user from the calendar?</p>
+                        <input type="hidden" class="form-control" id="keyfield_delete" name="keyfield" value="">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary cancelbtn" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary deletebtn">Unassign</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/canvas/libs/jquery/jquery.min.js"></script>
+    <script src="assets/canvas/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/canvas/libs/metismenu/metisMenu.min.js"></script>
+    <script src="assets/canvas/libs/node-waves/waves.min.js"></script>
+    <script src="https://unpkg.com/gijgo@1.9.13/js/gijgo.min.js" type="text/javascript"></script>
+    <!-- Custom  -->
+    <script src="assets/canvas/js/app-full.js"></script>
+    <script>
+        $(document).ready(function(){
+
+            //sidebar sticky animation bouncng effect
+            $(window).scroll(function() {
+                var bounceId = $('#addBounce');
+                var className = $('.wrapper');
+                var hT = className.offset().top,
+                    hH = className.outerHeight(),
+                    wH = $(window).height(),
+                    wS = $(this).scrollTop();
+
+                //console.log('this scrooll ->'+ wS);
+                //console.log((hT-wH) ,wS);
+                if (wS > 63){
+                    bounceId.addClass('bounce');
+                }else if(wS < 63 ){
+                    bounceId.removeClass('bounce');
+                }
+            });
+
+
+        });
+    </script>
+    <script>
+        Date.prototype.addDays = function(days) {
+            var date = new Date(this.valueOf());
+            date.setDate(date.getDate() + days);
+            return date;
+        }
+        Date.prototype.minusDays = function(days) {
+            var date = new Date(this.valueOf());
+            date.setDate(date.getDate() - days);
+            return date;
+        }
+    </script>
+    <script src="assets/canvas/js/myshift.js?2100"></script>
+
+    <script>
+        // https://gijgo.com/timepicker/example/bootstrap-4
+        $('#from').timepicker({
+            uiLibrary: 'bootstrap4'
+        });
+        $('#to').timepicker({
+            uiLibrary: 'bootstrap4'
+        });
+    </script>
+
+    <script>
+        // Add Modal
+        var AddModalID = $('#addCardModal');
+        var AddModalTitle = $('#addModalTitle');
+
+        // Delete Modal
+        var DeleteModalID = $('#deleteCardModal');
+        var DeleteModalTitle = $('#deleteModalTitle');
+
+        /**
+         * 
+         * @param {*} segment 
+         */
+        function openModal(keyfield, userId, timeIn, timeOut, scheduleColor, details) {
+            // console.log("Clicked openModal");
+            // console.log("Column Segment " + segment);
+
+            let selectedColor = getMessage(scheduleColor);
+
+            // set value of card col
+            $("#user_id").val(userId);
+            $("#keyfield").val(keyfield);
+            $("#user_id").val(userId);
+            $("#from").val(timeIn);
+            $("#to").val(timeOut);
+            $("#note_content").val(details);
+            $("#schedule_label").val(scheduleColor);
+            $("#selected_color").text(selectedColor);
+
+            AddModalTitle.text('Add Comment');
+            AddModalID.modal('show');
+        }
+
+        function deleteCardModal(keyfield) {
+            // console.log("Clicked deleteCardModal");
+            // console.log("Column Segment " + segment);
+
+            $("#keyfield_delete").val(keyfield);
+
+            DeleteModalTitle.text('Delete');
+            DeleteModalID.modal('show');
+
+        }
+
+        function selectChange(colorVal) {
+
+            let selectedColor = getMessage(colorVal);
+
+            // Select 
+            $("#schedule_label").val(colorVal);
+
+            $("#selected_color").text(selectedColor);
+        }
+
+        function getMessage(colorVal) {
+            let color = '';
+
+            switch (colorVal) {
+                case 'shf-purple':
+                    // code block
+                    color = "Purple";
+                    break;
+                case 'shf-orange':
+                    // code block
+                    color = "Orange";
+                    break;
+                case 'shf-green':
+                    // code block
+                    color = "Green";
+                    break;
+                case 'shf-yellow':
+                    // code block
+                    color = "Yellow";
+                    break;
+                default:
+                    // code block
+            }
+
+            return color;
+        }
+    </script>
+
+</body>
+
+</html>

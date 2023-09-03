@@ -130,15 +130,15 @@ System.out.println("\nRefresh : " + resp);
 	    return jResp;
 	}
 
-	public JSONObject sendData(String myURL, String data) {
+	public JSONObject sendData(String myURL, String myData) {
 		JSONObject jResp = new JSONObject();
 		
 		try {			
-System.out.println("BASE 2010 : \n" + data);
-			
+System.out.println("BASE 2010 : \n" + myData);
+
 			OkHttpClient client = new OkHttpClient();
 			MediaType mediaType = MediaType.parse("application/json");
-			RequestBody body = RequestBody.create(mediaType, data);
+			RequestBody body = RequestBody.create(myData, mediaType);
 			Request request = new Request.Builder()
 				.url(myURL)
 				.post(body)
@@ -162,10 +162,10 @@ System.out.println(resp);
 		
 		try {			
 System.out.println("BASE 2010 : \n" + data);
-			
+						
 			OkHttpClient client = new OkHttpClient();
 			MediaType mediaType = MediaType.parse("application/json");
-			RequestBody body = RequestBody.create(mediaType, data);
+			RequestBody body = RequestBody.create(data, mediaType);
 			Request request = new Request.Builder()
 				.url(myURL)
 				.post(body)

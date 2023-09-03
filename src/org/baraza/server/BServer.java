@@ -37,7 +37,7 @@ public class BServer extends Thread {
 		root = xml.getRoot();
 
 		greeting = root.getAttribute("greeting");
-		portNumber = new Integer(root.getAttribute("port", "7777"));
+		portNumber = Integer.valueOf(root.getAttribute("port", "7777"));
 		logHandle = new BLogHandle(root);
 		logHandle.config(log);
 		

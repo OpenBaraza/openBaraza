@@ -14069,7 +14069,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 		//handle successfull value change
 		function success(value) {
-			if (self.currentCell === cell) {
+						if (self.currentCell === cell) {
 				var valid = true;
 
 				if (cell.column.modules.validate && self.table.modExists("validate") && self.table.options.validationMode != "manual") {

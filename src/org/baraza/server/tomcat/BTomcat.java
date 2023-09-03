@@ -12,10 +12,8 @@ import java.util.logging.Logger;
 import java.util.List;
 import java.io.File;
 import java.io.IOException;
-import javax.servlet.ServletException;
 import java.net.MalformedURLException;
 
-import javax.servlet.Servlet;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.AprLifecycleListener;
@@ -44,11 +42,12 @@ public class BTomcat extends Thread {
 			String appBase = baseDir + root.getAttribute("app.base") + ps;
 			String repository = root.getAttribute("repository") + ps;
 			String contextPath = root.getAttribute("contextPath");
-			Integer port = new Integer(root.getAttribute("port", "9876"));
+			Integer port = Integer.valueOf(root.getAttribute("port", "9090"));
 		
 			tomcat = new Tomcat();
 			tomcat.setPort(port);
 			tomcat.setBaseDir(baseDir);
+			tomcat.getConnector();
 			tomcat.enableNaming();
 
 			// Add AprLifecycleListener
@@ -74,8 +73,8 @@ public class BTomcat extends Thread {
 			}
 
 			tomcat.start();
-		} catch(javax.servlet.ServletException ex) {
-			log.severe("Tomcat startuo error : " + ex);
+			tomcat.getServer().await();
+			System.out.println("Tomcat Server started ...");
 		} catch(MalformedURLException ex) {
 			log.severe("Tomcat URL Malformation : " + ex);
 		} catch(LifecycleException ex) {
@@ -94,12 +93,13 @@ public class BTomcat extends Thread {
 		String contextPath = "/" + appKey;
 		projectDir += ps + appEl.getAttribute("path");
 		
-		Integer port = new Integer(appEl.getAttribute("port", "9090"));
+		Integer port = Integer.valueOf(appEl.getAttribute("port", "9090"));
 
 		try {
 			tomcat = new Tomcat();
 			tomcat.setPort(port);
 			tomcat.setBaseDir(baseDir);
+			tomcat.getConnector();
 			tomcat.enableNaming();
 
 			// Add AprLifecycleListener
@@ -121,18 +121,13 @@ public class BTomcat extends Thread {
 			}
 
 			tomcat.start();
-		} catch(javax.servlet.ServletException ex) {
-			log.severe("Tomcat startuo error : " + ex);
+			tomcat.getServer().await();
+			System.out.println("Tomcat Server started ...");
 		} catch(MalformedURLException ex) {
 			log.severe("Tomcat URL Malformation : " + ex);
 		} catch(LifecycleException ex) {
 			log.severe("Tomcat Life cycle error : " + ex);
 		}
-	}
-
-	public void addServlet(String urlPattern, String contextPath, String servletName, Servlet servlet) {
-		tomcat.addServlet(contextPath, servletName, servlet);
-		context.addServletMappingDecoded(urlPattern, servletName);
 	}
 
 	public void addSecurityConstraint(String urlPattern, List<String> roles) {

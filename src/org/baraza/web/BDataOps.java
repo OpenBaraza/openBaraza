@@ -23,12 +23,12 @@ import java.io.IOException;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletConfig;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
 
 import org.apache.commons.lang3.RandomStringUtils;
 
@@ -82,10 +82,8 @@ public class BDataOps {
 		if(authFunction == null) {
 			try {
 				request.login(authUser, authPass);
-				if(request.getUserPrincipal() != null) {
-					BUser user = new BUser(db, request.getRemoteAddr(), authUser);
-					userId = user.getUserID();
-				}
+				BUser user = new BUser(db, request.getRemoteAddr(), authUser);
+				userId = user.getUserID();
 			} catch(ServletException ex) {
 				System.out.println("Authentication Exception : " + ex);
 			}
@@ -204,7 +202,7 @@ System.out.println("BASE 3010 : " + viewKey);
 			boolean hasAccess = user.checkAccess(el.getAttribute("role"), el.getAttribute("access"));
 			if(hasAccess) {
 				if(el.isLeaf()) {
-					Integer mKey = new Integer(el.getValue());
+					Integer mKey = Integer.valueOf(el.getValue());
 					JSONObject jField = new JSONObject();
 					jField.put("key", mKey);
 					jField.put("name", el.getAttribute("name"));
@@ -326,8 +324,8 @@ System.out.println("BASE 3010 : " + viewKey);
 		String viewKey = request.getParameter("view");
 		BElement view = getView(viewKey);
 		BUser user = null;
-		Integer languageId = new Integer(0);
-		Integer orgId = new Integer(0);
+		Integer languageId = Integer.valueOf(0);
+		Integer orgId = Integer.valueOf(0);
 		if(userId != null) {
 			user = users.get(userId);
 			orgId = user.getUserOrgId();
@@ -462,8 +460,8 @@ System.out.println("BASE 2020 : body " + body);
 		String linkData = request.getParameter("linkdata");
 		BElement view = getView(viewKey);
 		BUser user = null;
-		Integer languageId = new Integer(0);
-		Integer orgId = new Integer(0);
+		Integer languageId = Integer.valueOf(0);
+		Integer orgId = Integer.valueOf(0);
 		if(userId != null) {
 			user = users.get(userId);
 			orgId = user.getUserOrgId();
@@ -593,18 +591,18 @@ System.out.println("BASE 3020 WHERE : " + whereSql);
 		String viewKey = request.getParameter("view");
 		BElement view = getView(viewKey);
 		BUser user = users.get(userId);
-		
+
 		if(view.getName().equals("FORM")) return jResp;
 
 		String whereSql = request.getParameter("where");
 		if(BWebUtils.checkInjection(whereSql)) whereSql = null;
-System.out.println("BASE 3020 WHERE : " + whereSql);
 
 		if(view.getAttribute("linkfield") != null) {
 			if(whereSql == null) whereSql = "(" + view.getAttribute("linkfield") + " = '" + linkData + "')";
 			else whereSql += " AND (" + view.getAttribute("linkfield") + " = '" + linkData + "')";
 		}
-		
+System.out.println("BASE 3020 WHERE : " + whereSql);
+
 		String keyField = view.getAttribute("keyfield");
 		if((keyData != null) && (keyField != null)) {
 			if(whereSql == null) whereSql = "(" + keyField + " = '" + keyData + "')";
@@ -733,7 +731,7 @@ System.out.println("BASE 3360 : " + body);
 	}
 	
 	public JSONObject doActions(BElement view, String action, String remoteAddr, JSONArray jIds, BUser user, String linkData) {
-		Integer aPos = new Integer(action);
+		Integer aPos = Integer.valueOf(action);
 		BElement el = view.getElementByName("ACTIONS").getElement(aPos);
 		String mySql = "";
 		String sucessCode = "1";
@@ -798,7 +796,7 @@ System.out.println("BASE 4040 : " + linkData);
 		String reportHtml = "<html><head></head><body>\n";
 		reportHtml += webReport.getReport(db, user, linkData, request, reportPath, false);
 		reportHtml += "\n</body></html>";
-			
+
 		return reportHtml;
 	}
 	
@@ -806,7 +804,7 @@ System.out.println("BASE 4040 : " + linkData);
 		JSONObject jResp = new JSONObject();
 		String body = BWebUtils.requestBody(request);
 		if(body == null) body = "{}";
-		
+
 		String linkData = request.getParameter("linkdata");
 		String viewKey = request.getParameter("view");
 		BElement view = getView(viewKey);
@@ -817,14 +815,12 @@ System.out.println("BASE 4040 : " + linkData);
 
 		BWebReport webReport = new BWebReport(db, view, user, request);
 		if(linkData != null) webReport.setParams("filterid", linkData);
-		webReport.getAppReport(db, user, request, response, 0);
-
+		webReport.getAppReport(db, user, request, response, reportPath, 0);
 	}
 	
 	public JSONObject addAttendance(HttpServletRequest request, String userId) {
 		JSONObject jResp = new JSONObject();
 		String myOutput = null;
-System.out.println("BASE 2020 : ");
 
 		BUser user = null;
 		if(userId == null) {
@@ -853,6 +849,7 @@ System.out.println("BASE 2020 : ");
 		}
 		
 		String body = BWebUtils.requestBody(request);
+System.out.println("BASE 2020 : addAttendance : "  + body);
 		if(body != null) {
 			JSONObject jObj = new JSONObject(body);
 
@@ -888,7 +885,8 @@ System.out.println("BASE 4040 : " + viewKey);
 		String sv[] = viewKey.split(":");
 		for(String svs : sv) viewKeys.add(svs);
 		views.add(root.getElementByKey(sv[0]));
-		
+//System.out.println("BASE 4050 : " + views.get(0).toString());
+
 		for(int i = 1; i < sv.length; i++) {
 			int subNo = Integer.valueOf(sv[i]);
 			views.add(views.get(i-1).getSub(subNo));

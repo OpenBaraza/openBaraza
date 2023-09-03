@@ -61,6 +61,7 @@ public class BReport extends JPanel {
 		parameters = new HashMap<String, Object>();
 		parameters.put("reportpath", reportpath);
 		parameters.put("SUBREPORT_DIR", reportpath);
+		parameters.put("LOGO_PATH", reportpath);
 
 		parameters.put("orgid", db.getOrgID());
 		parameters.put("orgwhere", db.getOrgWhere(null));
@@ -87,6 +88,7 @@ public class BReport extends JPanel {
         parameters.put("reporttitle", reportname);
 		parameters.put("reportpath", reportpath);
 		parameters.put("SUBREPORT_DIR", reportpath);
+		parameters.put("LOGO_PATH", reportpath);
 
 		parameters.put("orgid", db.getOrgID());
 		parameters.put("orgwhere", db.getOrgWhere(fielddef.getAttribute("org.table")));

@@ -8,6 +8,8 @@
  */
 package org.baraza.utils;
 
+import java.net.URL;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.FileInputStream;
@@ -138,9 +140,10 @@ public class BDesEncrypter {
 		InputStream in = null;
 		try {
 			// Decrypter file by name
-			in = decrypt(new FileInputStream(inFileName));
+			if(inFileName.startsWith("http")) in = decrypt(new URL(inFileName).openStream());
+			else in = decrypt(new FileInputStream(inFileName));
 		} catch (Exception ex) {
-			System.out.println("Error : " + ex);
+			System.out.println("InputStream decrypt Error : " + ex);
 		}
 		return in;
 	}

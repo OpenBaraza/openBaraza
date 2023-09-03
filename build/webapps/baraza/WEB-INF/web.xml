@@ -8,7 +8,7 @@
 
 	<context-param>
 		<param-name>config_file</param-name>
-		<param-value>baraza.xml</param-value>
+		<param-value>hr.xml</param-value>
 	</context-param>
 	<context-param>
 		<param-name>web_title</param-name>
@@ -74,7 +74,7 @@
 
 	<servlet>
 		<servlet-name>ImageServlet</servlet-name>
-		<servlet-class>net.sf.jasperreports.j2ee.servlets.ImageServlet</servlet-class>
+		<servlet-class>net.sf.jasperreports.jakarta.servlets.ImageServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>ImageServlet</servlet-name>
@@ -110,6 +110,15 @@
 	<servlet-mapping>
 		<servlet-name>BJSONData</servlet-name>
 		<url-pattern>/jsongeneral</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>BDataPost</servlet-name>
+		<servlet-class>org.baraza.web.BDataPost</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>BDataPost</servlet-name>
+		<url-pattern>/b_datapost</url-pattern>
 	</servlet-mapping>
 
 	<servlet>
@@ -154,6 +163,23 @@
 		<servlet-name>BarazaFiles</servlet-name>
 		<url-pattern>/delbarazafiles</url-pattern>
 	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>WebPictures</servlet-name>
+		<servlet-class>org.baraza.web.BWebPictures</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>WebPictures</servlet-name>
+		<url-pattern>/barazapictures</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>WebPictures</servlet-name>
+		<url-pattern>/delbarazapictures</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>WebPictures</servlet-name>
+		<url-pattern>/putbarazapictures</url-pattern>
+	</servlet-mapping>
 
 	<servlet>
 		<servlet-name>ShowReport</servlet-name>
@@ -183,23 +209,6 @@
 	</servlet-mapping>
 
 	<servlet>
-		<servlet-name>WebPictures</servlet-name>
-		<servlet-class>org.baraza.web.BWebPictures</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>WebPictures</servlet-name>
-		<url-pattern>/barazapictures</url-pattern>
-	</servlet-mapping>
-	<servlet-mapping>
-		<servlet-name>WebPictures</servlet-name>
-		<url-pattern>/delbarazapictures</url-pattern>
-	</servlet-mapping>
-	<servlet-mapping>
-		<servlet-name>WebPictures</servlet-name>
-		<url-pattern>/putbarazapictures</url-pattern>
-	</servlet-mapping>
-
-	<servlet>
 		<servlet-name>BWebCalendar</servlet-name>
 		<servlet-class>org.baraza.web.BWebCalendar</servlet-class>
 	</servlet>
@@ -218,12 +227,57 @@
 	</servlet-mapping>
 
 	<servlet>
+		<servlet-name>BAnalytics</servlet-name>
+		<servlet-class>org.baraza.web.BAnalytics</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>BAnalytics</servlet-name>
+		<url-pattern>/analytics</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
 		<servlet-name>BResume</servlet-name>
-		<servlet-class>org.baraza.web.BResume</servlet-class>
+		<servlet-class>org.baraza.hcm.BResume</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>BResume</servlet-name>
 		<url-pattern>/resume</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>BRecruitment</servlet-name>
+		<servlet-class>org.baraza.hcm.BRecruitment</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>BRecruitment</servlet-name>
+		<url-pattern>/recruitment</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>BTraining</servlet-name>
+		<servlet-class>org.baraza.hcm.BTraining</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>BTraining</servlet-name>
+		<url-pattern>/training</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>BOrgChart</servlet-name>
+		<servlet-class>org.baraza.hcm.BOrgChart</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>BOrgChart</servlet-name>
+		<url-pattern>/org_chart</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>BZKTecoApi</servlet-name>
+		<servlet-class>org.baraza.hcm.BZKTecoApi</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>BZKTecoApi</servlet-name>
+		<url-pattern>/zk_teco_api</url-pattern>
 	</servlet-mapping>
 
 	<servlet>
@@ -232,7 +286,7 @@
 
 		<init-param>
 			<param-name>xmlfile</param-name>
-			<param-value>api.xml</param-value>
+			<param-value>mobile.xml</param-value>
 		</init-param>
 	</servlet>
 	<servlet-mapping>
@@ -263,8 +317,11 @@
 			<url-pattern>/jsondata</url-pattern>
 			<url-pattern>/ajaxupdate</url-pattern>
 			<url-pattern>/ajax</url-pattern>
+			<url-pattern>/b_datapost</url-pattern>
 			<url-pattern>/webcalendar</url-pattern>
 			<url-pattern>/canvas</url-pattern>
+			<url-pattern>/analytics</url-pattern>
+			<url-pattern>/org_chart</url-pattern>
 		</web-resource-collection>
 		<auth-constraint>
 			<role-name>sysadmin</role-name>

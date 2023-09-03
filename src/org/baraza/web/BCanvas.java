@@ -15,13 +15,13 @@ import java.util.LinkedHashMap;
 import java.io.PrintWriter;
 import java.io.IOException;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletConfig;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
 
 import org.json.JSONObject;
 import org.json.JSONArray;
@@ -518,13 +518,18 @@ public class BCanvas extends HttpServlet {
 	
 	public JSONObject getScrumNotes(HttpServletRequest request, String archives) {
 		JSONObject jResp =  new JSONObject();
-		String mySql = "SELECT scrum_area_id, canvas_area_id, area_label, area_value, area_details FROM scrum_areas ";
+		String mySql = "SELECT scrum_area_id, canvas_area_id, area_label, area_value, area_details "
+			+ "FROM scrum_areas ";
 		if(!"-1".equals(bmcId)) {
-			mySql += "WHERE (org_id = " + orgId + ") AND (bmc_id = " + bmcId + ") AND (is_archived = " + archives + ")";
+			mySql += "WHERE (org_id = " + orgId + ") AND (bmc_id = " + bmcId + ") AND (is_archived = " 
+				+ archives + ")";
 		}
 		if(!"-1".equals(scrumboardId)) {
-			mySql += "WHERE (org_id = " + orgId + ") AND (scrum_board_id = " + scrumboardId + ") AND (is_archived = " + archives + ")";
+			mySql += "WHERE (org_id = " + orgId + ") AND (scrum_board_id = " + scrumboardId 
+				+ ") AND (is_archived = " + archives + ")";
 		}
+		
+		if(archives.toLowerCase().equals("true")) mySql += " ORDER BY scrum_area_id DESC LIMIT 20";
 			
 		BQuery rs = new BQuery(db, mySql);
 		
@@ -591,7 +596,8 @@ public class BCanvas extends HttpServlet {
 
 	public JSONObject getScrumBoards(HttpServletRequest request) {
 		JSONObject jResp =  new JSONObject();
-		String mySql = "SELECT scrum_board_id, scrum_board_name, messagecount FROM vw_staff_boards WHERE (entity_id = " + userID + ")";
+		String mySql = "SELECT scrum_board_id, scrum_board_name, messagecount FROM vw_staff_boards "
+			+ "WHERE (is_active = true) AND (board_active = true) AND (entity_id = " + userID + ")";
 		BQuery rs = new BQuery(db, mySql);
 		
 		JSONArray aData = new JSONArray();

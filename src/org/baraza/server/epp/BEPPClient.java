@@ -24,7 +24,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.KeyStoreException;
 import java.security.cert.CertificateException;
 import java.security.KeyManagementException;
-import javax.security.cert.X509Certificate;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.SSLContext;
@@ -79,12 +78,6 @@ public class BEPPClient {
 
 			dis = new DataInputStream(socket.getInputStream()); 
 			dos = new DataOutputStream(socket.getOutputStream()); 
-			X509Certificate chain[] = socket.getSession().getPeerCertificateChain(); 
-			for (int i = 0; i < chain.length; i++) { 
-				System.out.println("peer-certificate " + i); 
-				System.out.println(" Subject : " + chain[i].getSubjectDN().getName()); 
-				System.out.println(" Issuer  : " + chain[i].getIssuerDN().getName()); 
-			}
 		} catch(NoSuchAlgorithmException ex) {
 			System.out.println("Algorithm Error : " + ex);
 		} catch(IOException ex) {

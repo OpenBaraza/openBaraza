@@ -10,15 +10,16 @@ package org.baraza.web;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.text.DecimalFormat;
 import java.io.PrintWriter;
 import java.io.OutputStream;
 import java.io.IOException;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.ServletOutputStream;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletOutputStream;
 
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.ss.usermodel.CreationHelper;
@@ -87,19 +88,41 @@ public class BGridExport extends HttpServlet {
 		CreationHelper createHelper = wb.getCreationHelper();
 		Sheet sheet = wb.createSheet(view.getAttribute("name", "report"));
 		
+		DecimalFormat decFormat = new DecimalFormat("##########.##");
 		DataFormat format = wb.createDataFormat();
 		CellStyle numberStyle = wb.createCellStyle();
-		numberStyle.setDataFormat(format.getFormat("#,###.00"));
+		numberStyle.setDataFormat(format.getFormat("#,###.0"));
 		CellStyle dateStyle = wb.createCellStyle();
 		dateStyle.setDataFormat(createHelper.createDataFormat().getFormat("dd/mm/yyyy"));
 		
 		CellStyle titleStyle = wb.createCellStyle();
 		Font font = wb.createFont();
 		font.setBold(true);
-		titleStyle.setFont(font); 
+		titleStyle.setFont(font);
+
+		BQuery xlsData = new BQuery(web.getDB(), view, whereSql, null, false);
+		Row row = null; Cell cell = null;
+		int rc = 0;
 		
-		Cell cell;
-		Row row = sheet.createRow(0);
+		BElement tsel = view.getElementByName("TITLES");
+		if((tsel != null) && (xlsData.moveFirst())) {
+			for(BElement tel : tsel.getElements()) {
+				row = sheet.createRow(rc);
+
+				cell = row.createCell(0);
+				cell.setCellValue(tel.getAttribute("title"));
+				//cell.setCellStyle(titleStyle);
+
+				cell = row.createCell(1);
+				cell.setCellValue(xlsData.getString(tel.getValue()));
+				cell.setCellStyle(titleStyle);
+
+				rc++;
+			}
+			rc++;
+		}
+
+		row = sheet.createRow(rc);
 		int cc = 0;
 		for(BElement el : view.getElements()) {
 			String colTitle = el.getAttribute("title");
@@ -116,8 +139,7 @@ public class BGridExport extends HttpServlet {
 		String sRepeat = null;
 		Map<String, String> mRepeat = new HashMap<String, String>();
 		
-		int rc = 0;
-		BQuery xlsData = new BQuery(web.getDB(), view, whereSql, null, false);
+
 		xlsData.beforeFirst();
 		while(xlsData.moveNext()) {
 			cc = 0;
@@ -141,8 +163,17 @@ public class BGridExport extends HttpServlet {
 						cell.setCellValue("");
 					} else if(el.getName().equals("TEXTDECIMAL")) {
 						cell = row.createCell(cc);
-						cell.setCellValue(xlsData.getFloat(el.getValue()));
-						cell.setCellStyle(numberStyle);
+						float fVal = xlsData.getFloat(el.getValue());
+						Double dVal = Double.valueOf(decFormat.format(fVal));
+						cell.setCellValue(dVal);
+						if(el.getAttribute("pattern") == null) {
+							cell.setCellStyle(numberStyle);
+						} else {
+							CellStyle ptStyle = wb.createCellStyle();
+							ptStyle.setDataFormat(format.getFormat(el.getAttribute("pattern")));
+
+							cell.setCellStyle(ptStyle);
+						}
 					} else if(el.getName().equals("TEXTDATE")) {
 						cell = row.createCell(cc);
 						cell.setCellValue(xlsData.getDate(el.getValue()));
@@ -177,34 +208,13 @@ public class BGridExport extends HttpServlet {
 	
 	public void getCrossTabExcel(OutputStream os, BElement view, String whereSql) {
 		Workbook wb = new XSSFWorkbook();
-		CreationHelper createHelper = wb.getCreationHelper();
 		Sheet sheet = wb.createSheet(view.getAttribute("name", "report"));
-		
-		DataFormat format = wb.createDataFormat();
-		CellStyle numberStyle = wb.createCellStyle();
-		numberStyle.setDataFormat(format.getFormat("#,###.00"));
-		CellStyle dateStyle = wb.createCellStyle();
-		dateStyle.setDataFormat(createHelper.createDataFormat().getFormat("dd/mm/yyyy"));
-		
-		CellStyle titleStyle = wb.createCellStyle();
-		Font font = wb.createFont();
-		font.setBold(true);
-		titleStyle.setFont(font);
-		
-		Map<String, CellStyle> mCellStyles = new HashMap<String, CellStyle>();
-		mCellStyles.put("numberStyle", numberStyle);
-		mCellStyles.put("dateStyle", dateStyle);
-		mCellStyles.put("titleStyle", titleStyle);
-		
-		Cell cell;
-		Row row = sheet.createRow(0);
-		int cc = 0;
-		
+
 		BCrossTab ct = new BCrossTab(web.getDB(), view, whereSql, null);
-		ct.getExcel(sheet, mCellStyles);
+		ct.getExcel(sheet, wb);
 		ct.close();
 		
-		cc = 0;
+		int cc = 0;
 		for(BElement el : view.getElements()) {
 			String colTitle = el.getAttribute("title");
 			if(!el.getValue().equals("") && (colTitle != null)) {

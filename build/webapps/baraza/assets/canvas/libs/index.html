@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+
+
+<head>
+
+    <meta charset="utf-8" />
+    <title>BMC Canvas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="openbaraza BMC Framework" name="description" />
+    <meta content="Evingtone Ngoa" name="author" />
+    <!-- App favicon -->
+    <link rel="shortcut icon" href="assets/images/favicon.png">
+
+    <!-- dragula css -->
+    <link href="assets/libs/dragula/dragula.min.css" rel="stylesheet" type="text/css" />
+
+    <!-- Bootstrap Css -->
+    <link href="assets/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css" />
+    <!-- Icons Css -->
+    <link href="assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+    <!-- App Css-->
+    <link href="assets/css/app.min.css" id="app-style" rel="stylesheet" type="text/css" />
+    <link href="assets/css/custom.css" id="app-style" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body data-sidebar="dark">
+
+    <!-- Begin page -->
+    <div id="layout-wrapper">
+
+        <header id="page-topbar">
+            <div class="navbar-header">
+                <div class="d-flex">
+                    <!-- LOGO -->
+                    <div class="navbar-brand-box">
+                        <a href="index.html" class="logo logo-dark">
+                            <span class="logo-sm">
+                                <img src="assets/images/logo.svg" alt="" height="22">
+                            </span>
+                            <span class="logo-lg">
+                                <img src="assets/images/logo-dark.png" alt="" height="17">
+                            </span>
+                        </a>
+
+                        <a href="index.html" class="logo logo-light">
+                            <span class="logo-sm">
+                                <img src="assets/images/logo-light.svg" alt="" height="22">
+                            </span>
+                            <span class="logo-lg">
+                                <img src="assets/images/baraza-logo-horizontal.png" alt="" height="50">
+                            </span>
+                        </a>
+                    </div>
+
+
+                </div>
+
+                <div class="d-flex">
+
+                    <div class="dropdown d-inline-block d-lg-none ml-2">
+                        <button type="button" class="btn header-item noti-icon waves-effect"
+                            id="page-header-search-dropdown" data-toggle="dropdown" aria-haspopup="true"
+                            aria-expanded="false">
+                            <i class="mdi mdi-magnify"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right p-0"
+                            aria-labelledby="page-header-search-dropdown">
+
+                            <form class="p-3">
+                                <div class="form-group m-0">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" placeholder="Search ..."
+                                            aria-label="Recipient's username">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-primary" type="submit"><i
+                                                    class="mdi mdi-magnify"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Social Links -->
+                    <div class="dropdown d-none d-lg-inline-block ml-1">
+                        <button type="button" class="btn header-item noti-icon waves-effect" data-toggle="dropdown"
+                            aria-haspopup="true" aria-expanded="false">
+                            <i class="bx bx-customize"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                            <div class="px-lg-2">
+                                <div class="row no-gutters">
+                                    <div class="col">
+                                        <a class="dropdown-icon-item" target="_blank" href="https://app.slack.com/client/TA9QY7B2A/C0108JSAWDQ/whats_new?cdn_fallback=1">
+                                            <img src="assets/images/brands/slack.png" alt="slack">
+                                            <span>Slack</span>
+                                        </a>
+                                    </div>
+                                    <div class="col">
+                                        <a class="dropdown-icon-item" target="_blank" href="https://dev.openbaraza.org/projects/">
+                                            <img src="assets/images/brands/bitbucket.png" alt="bitbucket">
+                                            <span>Bitbucket</span>
+                                        </a>
+                                    </div>
+                                    <div class="col">
+                                        <a class="dropdown-icon-item" target="_blank" href="https://jira.openbaraza.org/browse/BS-124?filter=-5">
+                                            <img src="assets/images/brands/jira-3.svg" alt="Jira">
+                                            <span>Jira</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Full Screen -->
+                    <div class="dropdown d-none d-lg-inline-block ml-1">
+                        <button type="button" class="btn header-item noti-icon waves-effect" data-toggle="fullscreen">
+                            <i class="bx bx-fullscreen"></i>
+                        </button>
+                    </div>
+
+                    <!-- Profile -->
+                    <div class="dropdown d-inline-block" style="display: none !important;">
+                        <button type="button" class="btn header-item waves-effect" id="page-header-user-dropdown"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <img class="rounded-circle header-profile-user" src="assets/images/users/avatar-1.jpg"
+                                alt="Header Avatar">
+                            <span class="d-none d-xl-inline-block ml-1">Henry</span>
+                            <i class="mdi mdi-chevron-down d-none d-xl-inline-block"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <!-- item-->
+                            <a class="dropdown-item" href="#"><i class="bx bx-user font-size-16 align-middle mr-1"></i>
+                                Profile</a>
+                            <a class="dropdown-item" href="#"><i
+                                    class="bx bx-wallet font-size-16 align-middle mr-1"></i> My Wallet</a>
+                            <a class="dropdown-item d-block" href="#"><span
+                                    class="badge badge-success float-right">11</span><i
+                                    class="bx bx-wrench font-size-16 align-middle mr-1"></i> Settings</a>
+                            <a class="dropdown-item" href="#"><i
+                                    class="bx bx-lock-open font-size-16 align-middle mr-1"></i> Lock screen</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-danger" href="#"><i
+                                    class="bx bx-power-off font-size-16 align-middle mr-1 text-danger"></i> Logout</a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </header>
+
+
+        <!-- ============================================================== -->
+        <!-- Start right Content here -->
+        <!-- ============================================================== -->
+        <div class="main-content">
+
+            <div class="page-content">
+                <div class="container-fluid">
+
+                    <!-- start page title -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box d-flex align-items-center justify-content-between">
+                                <h4 class="mb-0 font-size-18">BMC Board</h4>
+
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item"><a href="javascript: void(0);">Tasks</a></li>
+                                        <li class="breadcrumb-item active">BMC Board</li>
+                                    </ol>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    <!-- end page title -->
+
+                    <div class="row">
+                        <div class="col-lg-2 col-md-offset-1">
+                            <div class="card">
+                                <div class="even card-body">
+                                    <div class="dropdown float-right">
+                                        <a href="#" class="dropdown-toggle arrow-none" data-toggle="dropdown"
+                                            aria-expanded="false">
+                                            <i class="mdi mdi-dots-vertical m-0 text-muted h5"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="#">Add</a>
+
+                                        </div>
+                                    </div> <!-- end dropdown -->
+
+                                    <h4 class="card-title mb-4">Key Partners</h4>
+                                    <div id="key-partners" class="pb-1 task-list">
+
+                                        <!-- start task card -->
+                                        <div class="card task-box">
+                                            <div class="card-body">
+                                                <div>
+                                                    <h5 class="font-size-15"><a href="javascript: void(0);"
+                                                            class="text-dark">Create a New Landing UI</a></h5>
+                                                    <!-- <p class="text-muted">15 Oct, 2019</p> -->
+                                                </div>
+
+                                                <p class="text-muted">
+                                                    Just drag and drop a note wherever you want it. You will see an
+                                                    indication,
+                                                    where the note will be dropped. You will notice that the canvas
+                                                    automatically
+                                                    adjusts to its content, so nothing to worry about. Go ahead and move
+                                                    this note now.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+                                        <!-- end task card -->
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end col -->
+
+                        <div class="col-lg-2">
+                            <!-- Key Activities -->
+                            <div class="card" style="margin-bottom: 0px;">
+                                <div class="odd card-body">
+                                    <div class="dropdown float-right">
+                                        <a href="#" class="dropdown-toggle arrow-none" data-toggle="dropdown"
+                                            aria-expanded="false">
+                                            <i class="mdi mdi-dots-vertical m-0 text-muted h5"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="#">Add</a>
+
+                                        </div>
+                                    </div> <!-- end dropdown -->
+
+                                    <h4 class="card-title mb-4">Key Activities</h4>
+                                    <div id="key-activities" class="pb-1 task-list">
+
+                                        <!-- start task card -->
+                                        <div class="card task-box">
+                                            <div class="card-body">
+                                                <div>
+                                                    <h5 class="font-size-15"><a href="javascript: void(0);"
+                                                            class="text-dark">Create a New Landing UI</a></h5>
+                                                    <!-- <p class="text-muted">15 Oct, 2019</p> -->
+                                                </div>
+
+                                                <p class="text-muted">
+                                                    Just drag and drop a note wherever you want it. You will see an
+                                                    indication,
+                                                    where the note will be dropped. You will notice that the canvas
+                                                    automatically
+                                                    adjusts to its content, so nothing to worry about. Go ahead and move
+                                                    this note now.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+                                        <!-- end task card -->
+
+
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- End Key Activities -->
+
+                            <!-- Key Resources -->
+                            <div class="card">
+                                <div class="odd card-body">
+                                    <div class="dropdown float-right">
+                                        <a href="#" class="dropdown-toggle arrow-none" data-toggle="dropdown"
+                                            aria-expanded="false">
+                                            <i class="mdi mdi-dots-vertical m-0 text-muted h5"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="#">Add</a>
+
+                                        </div>
+                                    </div> <!-- end dropdown -->
+
+                                    <h4 class="card-title mb-4">Key Resources</h4>
+                                    <div id="key-resources" class="pb-1 task-list">
+
+                                        <!-- start task card -->
+                                        <div class="card task-box">
+                                            <div class="card-body">
+                                                <div>
+                                                    <h5 class="font-size-15"><a href="javascript: void(0);"
+                                                            class="text-dark">Create a New Landing UI</a></h5>
+                                                    <!-- <p class="text-muted">15 Oct, 2019</p> -->
+                                                </div>
+
+                                                <p class="text-muted">
+                                                    Just drag and drop a note wherever you want it. You will see an
+                                                    indication,
+                                                    where the note will be dropped. You will notice that the canvas
+                                                    automatically
+                                                    adjusts to its content, so nothing to worry about. Go ahead and move
+                                                    this note now.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+                                        <!-- end task card -->
+
+
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- End Key Resources -->
+                        </div>
+                        <!-- end col -->
+
+                        <div class="col-lg-2">
+                            <div class="card">
+                                <div class="even card-body">
+                                    <div class="dropdown float-right">
+                                        <a href="#" class="dropdown-toggle arrow-none" data-toggle="dropdown"
+                                            aria-expanded="false">
+                                            <i class="mdi mdi-dots-vertical m-0 text-muted h5"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="#">Add</a>
+
+                                        </div>
+                                    </div> <!-- end dropdown -->
+
+                                    <h4 class="card-title mb-4">Value Propositions</h4>
+                                    <div id="value-propositions" class="pb-1 task-list">
+
+                                        <!-- start task card -->
+                                        <div class="card task-box">
+                                            <div class="card-body">
+                                                <div>
+                                                    <h5 class="font-size-15"><a href="javascript: void(0);"
+                                                            class="text-dark">Create a New Landing UI</a></h5>
+                                                    <!-- <p class="text-muted">15 Oct, 2019</p> -->
+                                                </div>
+
+                                                <p class="text-muted">
+                                                    Just drag and drop a note wherever you want it. You will see an
+                                                    indication,
+                                                    where the note will be dropped. You will notice that the canvas
+                                                    automatically
+                                                    adjusts to its content, so nothing to worry about. Go ahead and move
+                                                    this note now.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+                                        <!-- end task card -->
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end col -->
+
+                        <div class="col-lg-2">
+                            <!-- Customer Relationships -->
+                            <div class="card" style="margin-bottom: 0px;">
+                                <div class="odd card-body">
+                                    <div class="dropdown float-right">
+                                        <a href="#" class="dropdown-toggle arrow-none" data-toggle="dropdown"
+                                            aria-expanded="false">
+                                            <i class="mdi mdi-dots-vertical m-0 text-muted h5"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="#">Add</a>
+
+                                        </div>
+                                    </div> <!-- end dropdown -->
+
+                                    <h4 class="card-title mb-4">Customer Relationships</h4>
+                                    <div id="customer-relationships" class="pb-1 task-list">
+
+                                        <!-- start task card -->
+
+                                        <!-- end task card -->
+
+
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- End Customer Relationships -->
+
+                            <!-- Channels  -->
+                            <div class="card">
+                                <div class="odd card-body">
+                                    <div class="dropdown float-right">
+                                        <a href="#" class="dropdown-toggle arrow-none" data-toggle="dropdown"
+                                            aria-expanded="false">
+                                            <i class="mdi mdi-dots-vertical m-0 text-muted h5"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="#">Add</a>
+
+                                        </div>
+                                    </div> <!-- end dropdown -->
+
+                                    <h4 class="card-title mb-4">Customer Relationships</h4>
+                                    <div id="channels" class="pb-1 task-list">
+
+                                        <!-- start task card -->
+
+                                        <!-- end task card -->
+
+
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- End Channels  -->
+                        </div>
+                        <!-- end col -->
+
+                        <div class="col-lg-2">
+                            <div class="card">
+                                <div class="even card-body">
+                                    <div class="dropdown float-right">
+                                        <a href="#" class="dropdown-toggle arrow-none" data-toggle="dropdown"
+                                            aria-expanded="false">
+                                            <i class="mdi mdi-dots-vertical m-0 text-muted h5"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="#">Add</a>
+
+                                        </div>
+                                    </div> <!-- end dropdown -->
+
+                                    <h4 class="card-title mb-4">Customer Segments</h4>
+                                    <div id="customer-segments" class="pb-1 task-list">
+
+                                        <!-- start task card -->
+
+                                        <!-- end task card -->
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end col -->
+
+                        <!-- Bottom -->
+
+                        <div class="col-lg-6 col-md-offset-1">
+                            <div class="card">
+                                <div class="odd card-body">
+                                    <div class="dropdown float-right">
+                                        <a href="#" class="dropdown-toggle arrow-none" data-toggle="dropdown"
+                                            aria-expanded="false">
+                                            <i class="mdi mdi-dots-vertical m-0 text-muted h5"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="#">Add</a>
+
+                                        </div>
+                                    </div> <!-- end dropdown -->
+
+                                    <h4 class="card-title mb-4">Cost Structure</h4>
+                                    <div id="cost-structure" class="pb-1 task-list">
+
+                                        <!-- start task card -->
+                                        <div class="card task-box">
+                                            <div class="card-body">
+                                                <div>
+                                                    <h5 class="font-size-15"><a href="javascript: void(0);"
+                                                            class="text-dark">Create a New Landing UI</a></h5>
+                                                    <!-- <p class="text-muted">15 Oct, 2019</p> -->
+                                                </div>
+
+                                                <p class="text-muted">
+                                                    Just drag and drop a note wherever you want it. You will see an
+                                                    indication,
+                                                    where the note will be dropped. You will notice that the canvas
+                                                    automatically
+                                                    adjusts to its content, so nothing to worry about. Go ahead and move
+                                                    this note now.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+                                        <!-- end task card -->
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end col -->
+
+                        <div class="col-lg-6 col-md-offset-1">
+                            <div class="card">
+                                <div class="odd card-body">
+                                    <div class="dropdown float-right">
+                                        <a href="#" class="dropdown-toggle arrow-none" data-toggle="dropdown"
+                                            aria-expanded="false">
+                                            <i class="mdi mdi-dots-vertical m-0 text-muted h5"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <a class="dropdown-item" href="#">Add</a>
+
+                                        </div>
+                                    </div> <!-- end dropdown -->
+
+                                    <h4 class="card-title mb-4">Revenue Streams</h4>
+                                    <div id="revenue-streams" class="pb-1 task-list">
+
+                                        <!-- start task card -->
+                                        <div class="card task-box">
+                                            <div class="card-body">
+                                                <div>
+                                                    <h5 class="font-size-15"><a href="javascript: void(0);"
+                                                            class="text-dark">Create a New Landing UI</a></h5>
+                                                    <!-- <p class="text-muted">15 Oct, 2019</p> -->
+                                                </div>
+
+                                                <p class="text-muted">
+                                                    Just drag and drop a note wherever you want it. You will see an
+                                                    indication,
+                                                    where the note will be dropped. You will notice that the canvas
+                                                    automatically
+                                                    adjusts to its content, so nothing to worry about. Go ahead and move
+                                                    this note now.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+                                        <!-- end task card -->
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end col -->
+
+                    </div>
+                    <!-- end row -->
+
+                </div> <!-- container-fluid -->
+            </div>
+            <!-- End Page-content -->
+
+
+            <footer class="footer">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <script>document.write(new Date().getFullYear())</script> &copy; | All Rights Reserved.
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-sm-right d-none d-sm-block">
+                                Open Baraza BMC by DewCIS Solutions
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+        <!-- end main content-->
+
+    </div>
+    <!-- END layout-wrapper -->
+
+
+    <!-- JAVASCRIPT -->
+    <script src="assets/libs/jquery/jquery.min.js"></script>
+    <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/libs/metismenu/metisMenu.min.js"></script>
+    <script src="assets/libs/simplebar/simplebar.min.js"></script>
+    <script src="assets/libs/node-waves/waves.min.js"></script>
+
+    <!-- dragula plugins -->
+    <script src="assets/libs/dragula/dragula.min.js"></script>
+
+    <script src="assets/js/task-canvas.init.js"></script>
+
+    <script src="assets/js/app-full.js"></script>
+
+</body>
+
+</html>

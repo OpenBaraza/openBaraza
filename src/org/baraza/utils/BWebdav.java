@@ -16,14 +16,14 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import  javax.xml.namespace.QName;
+import javax.xml.namespace.QName;
 
 import com.github.sardine.Sardine;
 import com.github.sardine.DavResource;
 import com.github.sardine.SardineFactory;
 
 public class BWebdav {
-	Logger log = Logger.getLogger(Bio.class.getName());
+	Logger log = Logger.getLogger(BWebdav.class.getName());
 
 	Sardine sardine = null;
 	String basePath = null;
@@ -31,7 +31,7 @@ public class BWebdav {
 	public BWebdav(String path, String userName, String passWord) {
 		if((path == null) || (userName == null)) return;
 		basePath = path;
-
+		
 		try {
 			sardine = SardineFactory.begin(userName, passWord);
 		} catch(Exception ex) {
@@ -39,7 +39,7 @@ public class BWebdav {
 			log.severe("webdav error : " + ex);
 		}
 	}
-
+	
 	public void setPath(String path) {
 		basePath = path;
 	}

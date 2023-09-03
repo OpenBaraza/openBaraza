@@ -51,6 +51,7 @@ public class BReportFile {
 		parameters = new HashMap<String, Object>();
 		parameters.put("reportpath", root.getAttribute("reportpath"));
 		parameters.put("SUBREPORT_DIR", root.getAttribute("reportpath"));
+		parameters.put("LOGO_PATH", root.getAttribute("reportpath"));
 
 		parameters.put("orgid", db.getOrgID());
 
@@ -105,11 +106,8 @@ public class BReportFile {
 	public boolean getReport(String reportpath, String reportname, String keyfield, Map<String, String> rptParams) {
 		parameters.put("reportpath", reportpath);
 		parameters.put("SUBREPORT_DIR", reportpath);
+		parameters.put("LOGO_PATH", reportpath);
 		parameters.put("filterid", keyfield);
-
-		parameters.put("orgid", db.getOrgID());
-		parameters.put("orgwhere", db.getOrgWhere(null));
-		parameters.put("organd", db.getOrgAnd(null));
 
 		for(String rptParam : rptParams.keySet()) parameters.put(rptParam, rptParams.get(rptParam));
 

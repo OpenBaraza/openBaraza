@@ -8,10 +8,10 @@
  */
 package org.baraza.web;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletConfig;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.ServletException;
 
 import org.baraza.DB.BDB;
 import org.baraza.DB.BTranslations;

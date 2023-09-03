@@ -8,6 +8,11 @@
  */
 package org.baraza.web;
 
+import java.io.File;
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+
 import java.util.logging.Logger;
 import java.util.Map;
 import java.util.HashMap;
@@ -16,16 +21,11 @@ import java.util.ArrayList;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-import java.io.File;
-import java.io.InputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
-
-import java.sql.SQLException;
+import jakarta.servlet.http.Part;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -37,15 +37,11 @@ import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-
 import org.baraza.DB.BDB;
 import org.baraza.DB.BQuery;
 import org.baraza.xml.BXML;
 import org.baraza.xml.BElement;
+import org.baraza.utils.BWebUtils;
 import org.baraza.utils.BNumberFormat;
 import org.baraza.utils.BCipher;
 
@@ -812,57 +808,33 @@ public class BForms {
 		String response = "";
 
 		int MaxMemorySize = 2048576;
-		File TempDirectory = new File("/opt/tomcat/temp/baraza.tmp");
-
-		// Create a factory for disk-based file items
-		DiskFileItemFactory factory = new DiskFileItemFactory(MaxMemorySize, TempDirectory);
-
-		// Create a new file upload handler
-		ServletFileUpload upload = new ServletFileUpload(factory);
-
-		// Parse the request
-		//List<FileItem> items = new ArrayList<FileItem>();
-		List items;
+		String entryformid = request.getParameter("actionvalue");
 		try {
-			items = upload.parseRequest(request);
-		} catch(FileUploadException ex) {
-			log.severe("File upload exception");
-			return "File Upload error, ensure you have a correct excel format 97 version.";
-		}
-
-		String entryformid = "";
-		for(int i = 0; i < items.size(); i++) {
-			FileItem item = (FileItem)items.get(i);
-			if (item.isFormField()) {
-				String name = item.getFieldName();
-				String value = item.getString();
-				if(name.equals("actionvalue")) entryformid = value;
-				System.out.println(name + " = " + value);
-			}
-		}
-		for(int i = 0; i < items.size(); i++) {
-			FileItem item = (FileItem)items.get(i);
-			if (!item.isFormField()) {
-				String contentType = item.getContentType();
-				String fieldName = item.getFieldName();
-				String fileName = item.getName();
-				long fs = item.getSize();
+			for (Part part : request.getParts()) {
+				String contentType = part.getContentType();
+				String fieldName = part.getName();
+				String fileName = BWebUtils.getFileName(part.getHeader("content-disposition"));
+				long fs = part.getSize();
 				long maxfs = MaxMemorySize;
 
 				if(fs > maxfs) {
 					response = "<div class=\"style33\">The file is too big<br/>";
 					response += "maximum size allowed is " + String.valueOf(maxfs) + " bytes</div>";
-				} else if (fs > 0) {
-					getExcelData(fieldName, entryformid, item);
+				} else if ((fs > 0) && (part.getContentType() != null)) {
+					getExcelData(fieldName, entryformid, fileName, part);
 				}
 				System.out.println(contentType + " : " + fieldName + " = " + fileName);
 			}
+		} catch(IOException ex) {
+			log.severe("IO Error : " + ex);
+		} catch(ServletException ex) {
+			log.severe("IO Error : " + ex);
 		}
 
 		return entryformid;
 	}
 
-	public void getExcelData(String fieldid, String entryformid, FileItem item) { // Get all rows.
+	public void getExcelData(String fieldid, String entryformid, String fileName, Part part) { // Get all rows.
 		List<String> sub_fields = new ArrayList<String>();
 
 		String mysql = "SELECT sub_field_id FROM sub_fields WHERE field_id = " + fieldid;
@@ -874,8 +846,8 @@ public class BForms {
 	
 		Workbook wb = null;
 		try {
-			if(item.getFieldName().indexOf(".xlsx")>1) wb = new XSSFWorkbook(item.getInputStream());
-		    else if(item.getFieldName().indexOf(".xls")>1) wb = new HSSFWorkbook(item.getInputStream());
+			if(fileName.indexOf(".xlsx")>1) wb = new XSSFWorkbook(part.getInputStream());
+		    else if(fileName.indexOf(".xls")>1) wb = new HSSFWorkbook(part.getInputStream());
 		} catch (IOException ex) {
 			log.severe("an I/O error occurred, or the InputStream did not provide a compatible POIFS data structure : " + ex);
 		}

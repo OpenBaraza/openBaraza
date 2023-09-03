@@ -11,6 +11,7 @@
 	String resetPasswordModal = "";
 	
 	ServletContext context = getServletContext();
+	//String loginXml = "application.xml";
 	String loginXml = context.getInitParameter("login_xml");
 System.out.println("BASE LOGIN : " + loginXml);
 
@@ -141,7 +142,6 @@ System.out.println("BASE LOGIN : " + loginXml);
 		<a class="" href="" data-toggle="modal" data-target="#modal_subscription" style="color:#429539;font-size:18px">Company Subscription</a><br>
 		<a class="" href="" data-toggle="modal" data-target="#modal_application" style="color:#0088cc; font-size:14px">Register New Account</a> 
 
-
 		<div class="forget-password">
 			<h4>Forgot your password ?</h4>
 			<p>
@@ -184,9 +184,18 @@ System.out.println("BASE LOGIN : " + loginXml);
 </div>
 <!-- END LOGIN -->
 
+<div class="content">
+	<div class="form-group">
+		<div class="form-group">
+        	<div id="list_opportunities">
+        	</div>
+        </div>
+	</div>	
+</div>
+
 <!-- BEGIN COPYRIGHT -->
 <div class="copyright">
-	 2020 &copy; Open Baraza
+	 2020 &copy; openBaraza
 </div>
 <!-- END COPYRIGHT -->
 <!-- BEGIN JAVASCRIPTS(Load javascripts at bottom, this will reduce page load time) -->
@@ -276,9 +285,9 @@ System.out.println("BASE LOGIN : " + loginXml);
 	function responseMessage(data) {
 		$('#alert_message').html('');
 		if (data.error==0) {
-			$('#alert_message').html('<div class="alert alert-success" style="margin-bottom: 0;" role="alert">'+data.msg+'</div>');
+			$('#alert_message').html('<div class="alert alert-success" style="margin-bottom: 0;" role="alert">' + data.msg + '</div>');
 		} else {
-			$('#alert_message').html('<div class="alert alert-danger" style="margin-bottom: 0;" role="alert">'+data.error_msg+'</div>');
+			$('#alert_message').html('<div class="alert alert-danger" style="margin-bottom: 0;" role="alert">' + data.error_msg + '</div>');
 		}
 		$('#dismiss_msg').on('click', function() {
 			$('.modal').modal('hide');
@@ -339,6 +348,15 @@ System.out.println("BASE LOGIN : " + loginXml);
 	});
 
 </script>
+
+<% if(loginXml != null) { %>
+
+<script type="text/javascript" src="./assets/js/login_api.js?1026"></script>
+<script type="text/javascript">
+    listOpportunityCounts();
+</script>
+
+<% } %>
 <!-- END JAVASCRIPTS -->
 
 <%@ include file="./assets/include/calendar.jsp" %>

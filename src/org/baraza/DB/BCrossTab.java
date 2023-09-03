@@ -13,7 +13,10 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Vector;
+import java.text.DecimalFormat;
 
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Cell;
@@ -38,8 +41,8 @@ public class BCrossTab {
 	public BCrossTab(BDB db, BElement view, String wheresql, String sortby) {
 		this.view = view;
 
-		System.out.println("BASE : " + wheresql);
-		System.out.println("BASE : " + view.toString());
+		//System.out.println("BASE : " + wheresql);
+		//System.out.println("BASE : " + view.toString());
 	
 		baseRs = new BQuery(db, view, wheresql, null);
 		
@@ -55,7 +58,7 @@ public class BCrossTab {
 				ctq.close();
 				
 				for(String csc : cs.getColumns().keySet()) titles.add(csc);
-			} else {
+			} else if (el.getAttribute("title") != null) {
 				titles.add(el.getAttribute("title", ""));
 				fieldNames.add(el.getValue());
 			}
@@ -92,7 +95,7 @@ System.out.println("BASE : size " + btSize);
 			if(el.getName().equals("CROSSTAB")) {
 				BCrossSet cs = crosstabRs.get(el.getAttribute("name"));
 				myhtml.append(cs.getHtmlTitles());
-			} else {
+			} else if (el.getAttribute("title") != null) {
 				myhtml.append("<th>" + el.getAttribute("title") + "</th>");
 			}
 		}
@@ -107,7 +110,7 @@ System.out.println("BASE : size " + btSize);
 				if(el.getName().equals("CROSSTAB")) {
 					BCrossSet cs = crosstabRs.get(el.getAttribute("name"));
 					myhtml.append(cs.getRowHtml(keyData.get(j)));
-				} else {
+				} else if (el.getAttribute("title") != null) {
 					if(data.get(i) == null) {
 						myhtml.append("<td></td>");
 					} else {
@@ -138,7 +141,7 @@ System.out.println("BASE : size " + btSize);
 			if(el.getName().equals("CROSSTAB")) {
 				BCrossSet cs = crosstabRs.get(el.getAttribute("name"));
 				myCsv.append(cs.getCsvTitles());
-			} else {
+			} else if (el.getAttribute("title") != null) {
 				if(i!=0) myCsv.append(","); 
 				myCsv.append(getCsvValue(el.getAttribute("title")));
 			}
@@ -154,7 +157,7 @@ System.out.println("BASE : size " + btSize);
 				if(el.getName().equals("CROSSTAB")) {
 					BCrossSet cs = crosstabRs.get(el.getAttribute("name"));
 					myCsv.append(cs.getRowCsv(keyData.get(j)));
-				} else {
+				} else if (el.getAttribute("title") != null) {
 					if(i!=0) myCsv.append(","); 
 					myCsv.append(getCsvValue(data.get(i)));
 					i++;
@@ -176,16 +179,46 @@ System.out.println("BASE : size " + btSize);
 		return mystr;
     }
     
-    public void getExcel(Sheet sheet, Map<String, CellStyle> mCellStyles) {
+    public void getExcel(Sheet sheet, Workbook wb) {
 		int btSize = baseRs.getData().size();
 		Vector<String> keyData = baseRs.getKeyFieldData();
 System.out.println("BASE : size " + btSize);
 
-		CellStyle titleStyle = mCellStyles.get("titleStyle");
+		CreationHelper createHelper = wb.getCreationHelper();
+		DataFormat format = wb.createDataFormat();
+		CellStyle numberStyle = wb.createCellStyle();
+		numberStyle.setDataFormat(format.getFormat("#,###.0"));
+		CellStyle dateStyle = wb.createCellStyle();
+		dateStyle.setDataFormat(createHelper.createDataFormat().getFormat("dd/mm/yyyy"));
 
-		Cell cell;
-		Row row = sheet.createRow(0);
-		int cc = 0;
+		CellStyle titleStyle = wb.createCellStyle();
+		Font font = wb.createFont();
+		font.setBold(true);
+		titleStyle.setFont(font);
+
+		DecimalFormat decFormat = new DecimalFormat("##########.##");
+		Row row = null; Cell cell = null;
+		int rc = 0; int cc = 0;
+		
+		BElement tsel = view.getElementByName("TITLES");
+		if((tsel != null) && (baseRs.moveFirst())) {
+			for(BElement tel : tsel.getElements()) {
+				row = sheet.createRow(rc);
+
+				cell = row.createCell(0);
+				cell.setCellValue(tel.getAttribute("title"));
+				//cell.setCellStyle(titleStyle);
+
+				cell = row.createCell(1);
+				cell.setCellValue(baseRs.getString(tel.getValue()));
+				cell.setCellStyle(titleStyle);
+
+				rc++;
+			}
+			rc++;
+		}
+		
+		row = sheet.createRow(rc);
 		for(BElement el : view.getElements()) {
 			if(el.getName().equals("CROSSTAB")) {
 				BCrossSet cs = crosstabRs.get(el.getAttribute("name"));
@@ -203,7 +236,6 @@ System.out.println("BASE : size " + btSize);
 			}
 		}
 		
-		int rc = 0;
 		int j = 0;
 		int i = 0;
 		for(Vector<Object> data : baseRs.getData()) {
@@ -222,8 +254,12 @@ System.out.println("BASE : size " + btSize);
 							if(rowValue.equals("")) {
 								cell.setCellValue(rowValue);
 							} else {
-								Float fVal = new Float(rowValue);
-								cell.setCellValue(fVal);
+								Float fVal = Float.valueOf(rowValue);
+								Double dVal = Double.valueOf(decFormat.format(fVal));
+								//System.out.println(fVal + " -> " + dVal);
+
+								cell.setCellValue(dVal);
+								cell.setCellStyle(numberStyle);
 							}
 						} else {
 							cell.setCellValue(rowValue);
@@ -236,8 +272,18 @@ System.out.println("BASE : size " + btSize);
 					if(data.get(i) != null) cellVal = data.get(i).toString();
 					if(el.getName().equals("TEXTDECIMAL")) {
 						if(data.get(i) == null) cellVal = "0";
-						Float fVal = new Float(cellVal);
-						cell.setCellValue(fVal);
+						Float fVal = Float.valueOf(cellVal);
+						Double dVal = Double.valueOf(decFormat.format(fVal));
+
+						cell.setCellValue(dVal);
+						if(el.getAttribute("pattern") == null) {
+							cell.setCellStyle(numberStyle);
+						} else {
+							CellStyle ptStyle = wb.createCellStyle();
+							ptStyle.setDataFormat(format.getFormat(el.getAttribute("pattern")));
+
+							cell.setCellStyle(ptStyle);
+						}
 					} else {
 						cell.setCellValue(cellVal);
 					}

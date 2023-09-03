@@ -137,7 +137,36 @@ public class BDBUpgrade extends JPanel implements ActionListener {
 		if(cDB != null) {
 			List<String> mTables = cDB.getTableNames(0);
 			for(String mTable : mTables) area1.append(mTable + "\n");
-			if(mTables.size() == 0) area1.append("No missing tables\n");
+			
+			if(mTables.size() == 0) {
+				area1.append("No missing tables\n");
+			} else {
+				System.out.println(dbFilesDir + "setup/setup.sql");
+				Bio bio = new Bio();
+				StringBuffer tableFile = new StringBuffer(bio.loadFile(dbFilesDir + "setup/setup.sql"));
+				StringBuffer tableSql = new StringBuffer();
+				
+				for(String mTable : mTables) {
+					int sPos = tableFile.indexOf("CREATE TABLE " + mTable) - 1;
+					int ePos = tableFile.indexOf(");", sPos) + 2;
+					
+					if(sPos > 1) tableSql.append(tableFile.substring(sPos, ePos));
+
+					sPos = 2;
+					while(sPos > 1) {
+						sPos = tableFile.indexOf("ALTER TABLE ONLY " + mTable + "\n    ADD CONSTRAINT", sPos + 15) - 1;
+						if(sPos > 1) {
+							ePos = tableFile.indexOf(");", sPos) + 2;
+							String kfSql = tableFile.substring(sPos, ePos);
+							if(kfSql.contains("PRIMARY KEY")) {
+								tableSql.append(kfSql);
+								sPos = 0;
+							}
+						}
+					}
+				}
+				area2.append(tableSql.toString());
+			}
 		}
 	}
 	
@@ -146,8 +175,27 @@ public class BDBUpgrade extends JPanel implements ActionListener {
 		
 		if(cDB != null) {
 			List<String> mFields = cDB.getFieldNames(0);
-			for(String mField : mFields) area1.append(mField + "\n");
+			Map<String, List<String>> mMissingFields = new HashMap<String, List<String>>();
+			for(String mField : mFields) {
+				area1.append(mField + "\n");
+				String[] aotc = mField.split("\\.");
+				if(mMissingFields.containsKey(aotc[1])) {
+					mMissingFields.get(aotc[1]).add(aotc[2]);
+				} else {
+					List<String> lmFields = new ArrayList<String>();
+					lmFields.add(aotc[2]);
+					mMissingFields.put(aotc[1], lmFields);
+				}
+			}
 			if(mFields.size() == 0) area1.append("No missing table fields\n");
+			
+			// Get the fields only for tables in both databases
+			List<String> mTables = cDB.getTableNames(0);
+			for(String tableName : mMissingFields.keySet()) {
+				if(!mTables.contains("public." + tableName)) {
+					area2.append(db.getAddFieldSQL(tableName, mMissingFields.get(tableName)) + "\n");
+				}
+			}
 		}
 	}
 	

@@ -36,6 +36,7 @@ public class BUser {
 	boolean deploymentFilter = false;
 	String entityDepartments = null;
 	String entityDeployments = null;
+	String logoPath = null;
 	
 	public BUser(BDB db, String userIP, String userName, boolean newUser) {
 		this.userIP = userIP;
@@ -49,8 +50,8 @@ public class BUser {
 		entityType = "0";
 		nullUser = true;
 		
-		orgID = new Integer(0);
-		languageId = new Integer(0);
+		orgID = 0;
+		languageId = 0;
 		orgName = "default";
 		webLogos = "";
 	}
@@ -87,8 +88,8 @@ public class BUser {
 			orgID = rs.getInt("org_id");
 			if(rs.getBoolean("no_org")) orgID = null;
 			
-			if(rs.readField("sys_language_id") == null) languageId = new Integer(0);
-			else languageId = new Integer(rs.getInt("sys_language_id"));
+			if(rs.readField("sys_language_id") == null) languageId = 0;
+			else languageId = rs.getInt("sys_language_id");
 
 			superUser = rs.getBoolean("super_user");
 			String functionRole = rs.readField("function_role");
@@ -113,14 +114,15 @@ public class BUser {
 		if(startView == null) startView = "1:0";
 
 		if(orgID != null) {
-			String wlSql = "SELECT org_name, department_filter, "
-				+ "(CASE WHEN web_logos = true THEN '/' || org_id::text ELSE '' END) AS logo_path "
+			String wlSql = "SELECT org_name, department_filter, logo_path, "
+				+ "(CASE WHEN web_logos = true THEN '/' || org_id::text ELSE '' END) AS web_logo_path "
 				+ "FROM orgs WHERE org_id = " + orgID;
 			BQuery rsOrg = new BQuery(db, wlSql);
 			if(rsOrg.moveNext()) {
 				orgName = rsOrg.getString("org_name");
 				departmentFilter = rsOrg.getBoolean("department_filter");
-				webLogos = rsOrg.getString("logo_path");
+				logoPath = rsOrg.getString("logo_path");
+				webLogos = rsOrg.getString("web_logo_path");
 			}
 			rsOrg.close();
 			
@@ -278,6 +280,7 @@ public class BUser {
 	public String getGroupIDs() { return groupIDs; }
 	public String getEntityDepartments() { return entityDepartments; }
 	public String getEntityDeployments() { return entityDeployments; }
+	public String getLogoPath() { return logoPath; }
 
 	public Integer getUserOrgId() { return orgID; }
 	public String getUserOrg() { 

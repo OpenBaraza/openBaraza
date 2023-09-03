@@ -15,10 +15,10 @@ import java.util.LinkedHashMap;
 import java.io.PrintWriter;
 import java.io.IOException;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.json.JSONObject;
 import org.json.JSONArray;
@@ -75,7 +75,7 @@ public class BWebData {
 			if(context.getAttribute("translations") !=  null) 
 				translations = (BTranslations) context.getAttribute("translations");
 		}
-		
+
 	}
 
 	/* generate a web form */

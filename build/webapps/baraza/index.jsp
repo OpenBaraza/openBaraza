@@ -55,15 +55,6 @@
 	String actionOp = null;
 
 	String auditTable = null;
-
-	String contentType = request.getContentType();
-	if(contentType != null) {
-		if ((contentType.indexOf("multipart/form-data") >= 0)) {
-System.out.println("Base 1010");
-			web.updateMultiPart(request, context, context.getRealPath("WEB-INF" + ps + "tmp"));
-		}
-	}
-
 	String opResult = null;
 	if(process != null) {
 		if(process.equals("actionProcess")) {
@@ -73,10 +64,6 @@ System.out.println("Base 1010");
 		} else if(process.equals("FormAction")) {
 			String actionKey = request.getParameter("actionkey");
 			opResult = web.setOperation(actionKey, request);
-		} else if(process.equals("Update")) {
-			web.updateForm(request);
-		} else if(process.equals("Delete")) {
-			web.deleteForm(request);
 		} else if(process.equals("Submit")) {
 			web.submitGrid(request);
 		} else if(process.equals("Check All")) {
@@ -111,7 +98,7 @@ System.out.println("Base 1010");
 	<meta content="Open Baraza" name="author"/>
 
 	<!-- BEGIN GLOBAL MANDATORY STYLES -->
-	<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css"/>
+	<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css"/>
 	<link href="./assets/global/plugins/font-awesome/css/font-awesome.min.css"  rel="stylesheet" type="text/css"/>
 	<link href="./assets/global/plugins/fontawesome-web/css/solid.min.css" rel="stylesheet" type="text/css" />
 	<link href="./assets/global/plugins/fontawesome-web/css/all.min.css" rel="stylesheet" type="text/css" />
@@ -279,8 +266,12 @@ System.out.println("Base 1010");
 			<!-- DOC: Set data-keep-expand="true" to keep the submenues expanded -->
 			<!-- DOC: Set data-auto-speed="200" to adjust the sub menu slide up/down speed -->
 
-			<%= web.getMenu() %>
-
+			<% if(web.getPasswordCheck() == 2) { %>
+				<p5>Change your password first and refresh the page</p5>
+			<% } else { %>
+				<%= web.getMenu() %>
+			<% } %>
+			
 			<!-- END SIDEBAR MENU -->
 		</div>
 	</div>
@@ -303,112 +294,110 @@ System.out.println("Base 1010");
 
 <% } else { %>
 
-			<!-- BEGIN PAGE CONTENT-->
-			<form id="baraza" name="baraza" method="post" action="${mainPage}" data-confirm-send="false" data-ajax="false" accept-charset="ISO-8859-1" <%= web.getEncType() %> >
-				<%= web.getHiddenValues() %>
-			<div class="row">
-				<div class="col-md-12" >
-					<div class="tabbable tabbable-tabdrop"><%= web.getTabs() %></div>
-					<% if(opResult != null) out.println("<div style='color:#FF0000'>" + opResult + "</div>"); %>
-					<%= web.getSaveMsg() %>
+		<!-- BEGIN PAGE CONTENT-->
+		<form id="barazaForm" name="barazaForm" action="${mainPage}" method="post" accept-charset="ISO-8859-1" <%= web.getEncType() %> >
+			<%= web.getHiddenValues() %>
+		<div class="row">
+			<div class="col-md-12" >
+				<div class="tabbable tabbable-tabdrop"><%= web.getTabs() %></div>
+				<% if(opResult != null) out.println("<div style='color:#FF0000'>" + opResult + "</div>"); %>
+				<%= web.getSaveMsg() %>
 
-					<div class="portlet box <%= web.getViewColour() %>">
-						<div class="portlet-title">
-							<div class="caption">
-								<i class="<%= web.getViewIcon() %>"></i><%= web.getViewName() %>
-							</div>
-							<div class="tools">
-								<!--<a href="javascript:;" class="collapse">
-								</a>
-								<a href="javascript:;" class="reload">
-								</a>
-								<a href="javascript:;" class="remove">
-								</a>-->
-							</div>
-							
-							<div class='actions'>
-								<%= web.getButtons() %>
-							</div>
+				<div class="portlet box <%= web.getViewColour() %>">
+					<div class="portlet-title">
+						<div class="caption">
+							<i class="<%= web.getViewIcon() %>"></i><%= web.getViewName() %>
 						</div>
-
-						<div class="portlet-body" id="portletBody" style="min-height:360px;">
-							<% if(web.hasExpired()) {%>
-								<%@ include file="./assets/include/billing_expired.jsp" %>
-							<%} else {%>
-								<%= web.getBody(request, reportPath) %>
-							<% } %>
+						<div class="tools">
+							<!--<a href="javascript:;" class="collapse">
+							</a>
+							<a href="javascript:;" class="reload">
+							</a>
+							<a href="javascript:;" class="remove">
+							</a>-->
 						</div>
-
-						<div class="portlet-footer" id="portletFooter">
-							<% actionOp = web.getOperations();
-							if(actionOp != null) {	%>
-		                        <div class="row" style="">
-		                            <div class="col-md-2" >
-		                                <%= actionOp %>
-		                            </div>
-
-		                            <div class="col-md-1" >
-		                                <button type="button" id="btnAction" name="process" value="Action" class="btn btn-sm green">Action</button>
-		                            </div>
-		                        </div>
-							<%	} %>
-
-							<% if(fieldTitles != null) { %>
-								<table class="table" style="margin-bottom:0px;"><tr>
-									<td><%= fieldTitles %></td>
-									<td>
-										<select class='fnctcombobox form-control' name='filtertype' id='filtertype'>
-											<option value='ilike'>Contains (case insensitive)</option>
-											<option value='like'>Contains (case sensitive)</option>
-											<option value='='>Equal to</option>
-											<option value='>'>Greater than</option>
-											<option value='<'>Less than</option>
-											<option value='<='>Less or Equal</option>
-											<option value='>='>Greater or Equal</option>
-										</select>
-									</td>
-									<td><input class="form-control" name="filtervalue" type="text" id="filtervalue" /></td>
-									<td><input class="form-control" name='filterand' id='filterand' type='checkbox'/> And</td>
-									<td><input class="form-control" name='filteror' id='filteror' type='checkbox' /> Or</td>
-									<td><button type="button" class="form-control" name="btSearch" id="btSearch" value="Search">Search</button></td>
-									<td><font color="blue"><%=web.getFilterStatus()%></font></td>
-								</tr></table>
-							<% } %>
-						</div>
-
-						<div class="note note-info note-bordered">
-							<div class="row"><%= web.showFooter() %></div>
-							<div class="row"><%= web.getMenuMsg(xmlcnf) %></div>
+						
+						<div class='actions'>
+							<%= web.getButtons() %>
 						</div>
 					</div>
 
-                    <% if(web.isFileImport()) { %>
-                        <div class="row"> <!-- file upload row -->
-                            <div class="col-md-12">
-                                <span class="btn green fileinput-button">
-                                    <i class="glyphicon glyphicon-plus"></i>
-                                <span>Add files...</span>
-                                <!-- The file input field used as target for the file upload widget -->
-                                    <input id="fileupload" type="file" name="files[]" multiple>
-                                </span>
-                                <br>
-                                <br>
-                                <div id="progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                    <div class="progress-bar progress-bar-success" style="width:0%;">
-                                    </div>
-                                </div>
-                                <!-- The container for the uploaded files -->
-                                <div id="files" class="files"></div>
-                                <br>
-                            </div>
-                        </div><!-- end file upload row -->
-                    <% } %>
-                </div>
-            </form>
+					<div class="portlet-body" id="portletBody" style="min-height:360px;">
+						<% if(web.hasExpired()) {%>
+							<%@ include file="./assets/include/billing_expired.jsp" %>
+						<%} else {%>
+							<%= web.getBody(request, reportPath) %>
+						<% } %>
+					</div>
 
+					<div class="portlet-footer" id="portletFooter">
+						<% actionOp = web.getOperations();
+						if(actionOp != null) {	%>
+	                        <div class="row" style="">
+	                            <div class="col-md-2" >
+	                                <%= actionOp %>
+	                            </div>
+
+	                            <div class="col-md-1" >
+	                                <button type="button" id="btnAction" name="process" value="Action" class="btn btn-sm green">Action</button>
+	                            </div>
+	                        </div>
+						<%	} %>
+
+						<% if(fieldTitles != null) { %>
+							<table class="table" style="margin-bottom:0px;"><tr>
+								<td><%= fieldTitles %></td>
+								<td>
+									<select class='fnctcombobox form-control' name='filtertype' id='filtertype'>
+										<option value='ilike'>Contains (case insensitive)</option>
+										<option value='like'>Contains (case sensitive)</option>
+										<option value='='>Equal to</option>
+										<option value='>'>Greater than</option>
+										<option value='<'>Less than</option>
+										<option value='<='>Less or Equal</option>
+										<option value='>='>Greater or Equal</option>
+									</select>
+								</td>
+								<td><input class="form-control" name="filtervalue" type="text" id="filtervalue" /></td>
+								<td><input class="form-control" name='filterand' id='filterand' type='checkbox'/> And</td>
+								<td><input class="form-control" name='filteror' id='filteror' type='checkbox' /> Or</td>
+								<td><button type="button" class="form-control" name="btSearch" id="btSearch" value="Search">Search</button></td>
+								<td><font color="blue"><%=web.getFilterStatus()%></font></td>
+							</tr></table>
+						<% } %>
+					</div>
+
+					<div class="note note-info note-bordered">
+						<div class="row"><%= web.showFooter() %></div>
+						<div class="row"><%= web.getMenuMsg(xmlcnf) %></div>
+					</div>
+				</div>
+
+                <% if(web.isFileImport()) { %>
+                    <div class="row"> <!-- file upload row -->
+                        <div class="col-md-12">
+                            <span class="btn green fileinput-button">
+                                <i class="glyphicon glyphicon-plus"></i>
+                            <span>Add files...</span>
+                            <!-- The file input field used as target for the file upload widget -->
+                                <input id="fileupload" type="file" name="files[]" multiple>
+                            </span>
+                            <br>
+                            <br>
+                            <div id="progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar progress-bar-success" style="width:0%;">
+                                </div>
+                            </div>
+                            <!-- The container for the uploaded files -->
+                            <div id="files" class="files"></div>
+                            <br>
+                        </div>
+                    </div><!-- end file upload row -->
+                <% } %>
+            </div>
+        </form>
 
 <% } %>
-
 
 		</div>
 	</div>
@@ -418,7 +407,7 @@ System.out.println("Base 1010");
 <!-- BEGIN FOOTER -->
 <div class="page-footer">
 	<div class="page-footer-inner">
-		2017 &copy; Open Baraza. <a href="http://dewcis.com">Dew Cis Solutions Ltd.</a> All Rights Reserved
+		2022 &copy;  openBaraza <a href="http://dewcis.com">Dew Cis Solutions Ltd</a> All Rights Reserved
 	</div>
 	<div class="scroll-to-top">
 		<i class="icon-arrow-up"></i>
@@ -794,6 +783,8 @@ System.out.println("Base 1010");
    	function updateField(valueid, valuename) {
 		document.getElementsByName(valueid)[0].value = valuename;
 	}
+	
+	<% if(web.isGrid()) { %>
 
 	function resizeJqGridWidth(grid_id, div_id, width){
 	    $(window).bind('resize', function() {
@@ -802,14 +793,13 @@ System.out.println("Base 1010");
 	     }).trigger('resize');
 	}
 
-    <% if(web.isGrid()) { %>
 	var lastsel2 = -1;
 
     var jqcf = <%= web.getJSONHeader() %>;
 
-    jqcf.rowNum = 30;
+    jqcf.rowNum = 100;
     jqcf.height = 300;
-    jqcf.rowList=[10,20,30,40,50];
+    jqcf.rowList=[50,100,200,300,500];
     jqcf.datatype = "json";
     jqcf.pgbuttons = true;
 	jqcf.autoencode = false;
@@ -1167,26 +1157,89 @@ $(function () {
 	});
 </script>
 
-
+<%if(web.isForm() || web.isAccordion()) {%>
 <script>
-$(document).ready(function(){
-  $("#btn_search_filter").hide();
-  $("#myInput").on("keyup", function() {
-    var value = $(this).val().toLowerCase();
-    $("#jqlist tr").filter(function() {
-      $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-    });
-  });
+$(document).ready(function () {
+
+	$("#btnFormDelete").click(function (event) {
+		//stop submit the form, we will post it manually.
+		event.preventDefault();
+		
+		console.log('Delete button');
+		
+		$.ajax({
+			method: "GET",
+			url: "b_datapost",
+			dataType: "json",
+			
+			success: function (rData) {
+				console.log("SUCCESS : ", rData);
+				if(rData.success) {
+					if(rData.jump) {
+						location.replace(rData.jumplink);
+					}
+				} else {
+					toastr['error'](rData.msg, "error");
+				}
+			},
+			error: function (err) {
+				console.log("ERROR : ", err);
+			}
+		});
+	});
+	
+	$('#barazaForm').submit(function (event) {
+		//stop submit the form, we will post it manually.
+		event.preventDefault();
+
+		// Get form
+		var bfForm = $('#barazaForm');
+		var bForm = $('#barazaForm')[0];
+
+		// Create an FormData object 
+		var bData = new FormData(bForm);
+		
+		//console.log(bData);
+		console.log(bfForm.serialize());
+
+		// If you want to add an extra field for the FormData
+		//bData.append("CustomField", "This is some extra data, testing");
+		
+		<%= web.getEditorPosting() %>
+
+		// disabled the submit button
+		$("#btnFormProcess").prop("disabled", true);
+		
+		$.ajax({
+			type: "POST",
+			url: "b_datapost",
+			dataType: "json",
+			data: bData,
+			cache: false,
+			contentType: false,
+			processData: false,
+			timeout: 600000,
+
+			success: function (rData) {
+				console.log("SUCCESS : ", rData);
+				if(rData.success) {
+					if(rData.jump) {
+						location.replace(rData.jumplink);
+					}
+				} else {
+					toastr['error'](rData.msg, "error");
+				}
+				$("#btnFormProcess").prop("disabled", false);
+			},
+			error: function (err) {
+				console.log("ERROR : ", err);
+				$("#btnFormProcess").prop("disabled", false);
+			}
+		});
+	});
 });
 </script>
-<script>
-<% if(web.isGrid()) { %>
-	$("#myInput").hide();
-	document.getElementById("btn_search_filter").onclick = function() { 
-		$("#myInput").show();
-    }
 <% } %>
-</script>
 
 <%	if(web.getViewType().equals("DIARY")) {%>
 		<%@ include file="./assets/include/calendar.jsp" %>

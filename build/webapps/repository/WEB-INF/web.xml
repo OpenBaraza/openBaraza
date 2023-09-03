@@ -84,13 +84,11 @@
 		<web-resource-collection>
 			<web-resource-name>Users Protected Area</web-resource-name>
 			<url-pattern>/webdav/*</url-pattern>
+			<url-pattern>/files/*</url-pattern>
+			<url-pattern>/pictures/*</url-pattern>
 		</web-resource-collection>
 		<auth-constraint>
 			<role-name>sysadmin</role-name>
-			<role-name>user</role-name>
-			<role-name>client</role-name>
-			<role-name>staff</role-name>
-			<role-name>applicant</role-name>
 		</auth-constraint>
 	</security-constraint>
 
@@ -103,10 +101,6 @@
 	<!-- Security roles referenced by this web application -->
 	<security-role>
 		<role-name>sysadmin</role-name>
-		<role-name>user</role-name>
-		<role-name>client</role-name>
-		<role-name>staff</role-name>
-		<role-name>applicant</role-name>
 	</security-role>
 
 	<error-page>

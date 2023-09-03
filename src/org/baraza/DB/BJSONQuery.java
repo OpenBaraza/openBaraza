@@ -8,7 +8,7 @@
  */
 package org.baraza.DB;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Date;
 import java.util.List;
@@ -17,7 +17,7 @@ import java.sql.Clob;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
 import org.json.JSONObject;
 import org.json.JSONArray;
@@ -80,7 +80,7 @@ public class BJSONQuery extends BQuery {
 
 					if(!el.getValue().equals(""))  {
 						String cellData = formatData(el);
-						if(el.getAttribute("raw") == null) cellData = StringEscapeUtils.escapeHtml(cellData);
+						if(el.getAttribute("raw") == null) cellData = StringEscapeUtils.escapeHtml4(cellData);
 						
 						if(sfield) dispStr += ", " + cellData;
 						if (el.getName().equals("COLFIELD")) {

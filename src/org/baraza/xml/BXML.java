@@ -24,9 +24,9 @@ import org.xml.sax.SAXParseException;
 import org.w3c.dom.Document;
 import org.w3c.dom.DOMException;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 
 import org.baraza.utils.Bio;
 
@@ -70,7 +70,7 @@ public class BXML {
 		} catch (IOException ex) {
 			log.severe("File IO error : " + ex);
 		} catch(Exception ex) {
-			log.severe("File createtion error");
+			log.severe("File createtion error : " + ex);
 		}
 	}
 
@@ -84,13 +84,13 @@ public class BXML {
 		} catch (SAXParseException ex) {
 			log.severe("XML Error : " + ex.getMessage());
 		} catch (ParserConfigurationException ex) {
-			log.severe("File IO error : " + ex);
+			log.severe("Inputsteam IO error : " + ex);
 		} catch (SAXException ex) {
-			log.severe("File IO error : " + ex);
+			log.severe("Inputsteam IO error : " + ex);
 		} catch (IOException ex) {
-			log.severe("File IO error : " + ex);
+			log.severe("Inputsteam IO error : " + ex);
 		} catch(Exception ex) {
-			log.severe("File createtion error");
+			log.severe("Inputsteam createtion error : " + ex);
 		}
 	}
 	

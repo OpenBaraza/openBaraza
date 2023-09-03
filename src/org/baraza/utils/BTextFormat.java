@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.logging.Logger;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document.OutputSettings;
@@ -37,7 +37,7 @@ public class BTextFormat {
 			
 			String strDoc = jsoupDoc.html().replaceAll("\\\\n", "\n");
 			textData = Jsoup.clean(strDoc, "", Whitelist.none(), new OutputSettings().prettyPrint(false));
-			textData = StringEscapeUtils.unescapeHtml(textData);
+			textData = StringEscapeUtils.unescapeHtml4(textData);
 		} else {
 			textData = htmlData;
 		}

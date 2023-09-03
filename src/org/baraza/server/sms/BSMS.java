@@ -35,6 +35,11 @@ import javax.net.ssl.X509TrustManager;
 
 import org.json.JSONObject;
 
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
 import com.africastalking.Callback;
 import com.africastalking.SmsService;
 import com.africastalking.sms.Message;
@@ -47,6 +52,7 @@ import org.baraza.xml.BElement;
 import org.baraza.server.comm.BComm;
 import org.baraza.utils.BNumberFormat;
 import org.baraza.utils.BLogHandle;
+
 
 public class BSMS {
 	Logger log = Logger.getLogger(BSMS.class.getName());
@@ -82,15 +88,15 @@ public class BSMS {
 		processdelay = Integer.valueOf(node.getAttribute("processdelay", "10000")).intValue();
 
 		String orgSQL = "SELECT org_id, sp_id, service_id, sender_name, sms_rate, "
-			+ "send_fon, sc_register, ait_username, ait_app_key, alphanumeric "
-			+ "FROM orgs WHERE (is_active = true) ORDER BY org_id";
+			+ "send_fon, sc_register, ait_username, ait_app_key, alphanumeric, air_touch_key, provider_id "
+			+ "FROM orgs WHERE (is_active = true) AND (provider_id > 0) ORDER BY org_id";
 		smsOrgs =  new HashMap<String, String[]>();
 		BQuery orgRS = new BQuery(db, orgSQL);
 		while(orgRS.moveNext()) {
 			System.out.println("org_id : " + orgRS.getString("org_id"));
 
 			String orgID = orgRS.getString("org_id");
-			String[] orgParams = new String[9];
+			String[] orgParams = new String[11];
 			orgParams[0] = orgRS.getString("sp_id");
 			orgParams[1] = orgRS.getString("service_id");
 			orgParams[2] = orgRS.getString("sender_name");
@@ -100,6 +106,9 @@ public class BSMS {
 			orgParams[6] = orgRS.getString("ait_username");
 			orgParams[7] = orgRS.getString("ait_app_key");
 			orgParams[8] = orgRS.getString("alphanumeric");
+			orgParams[9] = orgRS.getString("air_touch_key");
+			orgParams[10] = orgRS.getString("provider_id");
+			
 			smsOrgs.put(orgID, orgParams);
 		}
 		
@@ -110,7 +119,9 @@ public class BSMS {
 		airtelBlock2 = Arrays.asList(ab2);
 		
 		// Start the safaricom sms service
-		safaricomSMS = new BSafaricomSMS(node, logHandle);
+		if(node.getAttribute("safaricom_user") != null) {
+			safaricomSMS = new BSafaricomSMS(node, logHandle);
+		}
 
 		qcomms = new ArrayList<BComm>();
 		for(BElement nd : node.getElements()) {
@@ -126,7 +137,7 @@ public class BSMS {
 		log.info("Soap SMS Processing...");
 		executing = true;
 		
-		safaricomSMS.getRefreshToken();
+		if(safaricomSMS != null) safaricomSMS.getRefreshToken();
 
 		boolean dbValid = db.isValid();
 		if(dbValid) {
@@ -142,7 +153,7 @@ public class BSMS {
 	}
 
 	public void sendMessage() {
-		String mysql = "SELECT sms_id, sms_number, sms_numbers, message, folder_id, sent, number_error, address_group_id, linkid, org_id FROM sms ";
+		String mysql = "SELECT sms_id, sms_number, sms_numbers, message, folder_id, sent, number_error, address_group_id, org_id FROM sms ";
 		mysql += "WHERE (folder_id = 0) AND (message_ready = true) AND (sent = false) AND (number_error = false) ORDER BY sms_id";
 		BQuery rs = new BQuery(db, mysql);
 
@@ -159,7 +170,7 @@ public class BSMS {
 				if(number.startsWith("0")) number = "254" + number.substring(1, number.length());
 				
 				if((number.length() > 11) && (number.length() < 15) && BNumberFormat.isNumeric(number)) {
-					isSent = sendSMS(number.trim(), msg, rs.getString("linkid"), rs.getString("sms_id"), rs.getString("org_id"), false);
+					isSent = sendSMS(number.trim(), msg, rs.getString("sms_id"), rs.getString("org_id"), false);
 				} else {
 					numberError = true;
 				}
@@ -170,13 +181,15 @@ public class BSMS {
 					
 					String[] nums = numbers.split(",");
 					for(String num : nums) {
+						System.out.println("Sending number : " + num);
+
 						if((num != null) && (num.length() > 3)) {
 							num = num.replace("\n", ",").replace("\r", "").replace("\"", "").replace("'", "").replace("/", "").replace("+", "").trim();
 							if(num.length() == 9) num = "254" + num;
 							else if(num.startsWith("0")) num = "254" + num.substring(1, num.length());
 							
 							if((num.length() > 11) && (num.length() < 15) && BNumberFormat.isNumeric(num)) {
-								isSent = sendSMS(num, msg, rs.getString("linkid"), rs.getString("sms_id"), rs.getString("org_id"), false);
+								isSent = sendSMS(num, msg, rs.getString("sms_id"), rs.getString("org_id"), false);
 							} else {
 								numberError = true;
 							}
@@ -197,7 +210,7 @@ public class BSMS {
 				if(number.startsWith("0")) number = "254" + number.substring(1, number.length());
 				
 				if((number.length() > 11) && (number.length() < 15) && BNumberFormat.isNumeric(number)) {
-					isSent = sendSMS(number.trim(), msg, rs.getString("linkid"), rs.getString("sms_id"), rs.getString("org_id"), false);
+					isSent = sendSMS(number.trim(), msg, rs.getString("sms_id"), rs.getString("org_id"), false);
 				} else {
 					numberError = true;
 				}
@@ -217,7 +230,7 @@ public class BSMS {
 				if(number.startsWith("0")) number = "254" + number.substring(1, number.length());
 				
 				if((number.length() > 11) && (number.length() < 15) && BNumberFormat.isNumeric(number)) {
-					isSent = sendSMS(number.trim(), msg, rs.getString("linkid"), rs.getString("sms_id"), rs.getString("org_id"), false);
+					isSent = sendSMS(number.trim(), msg, rs.getString("sms_id"), rs.getString("org_id"), false);
 				} else {
 					numberError = true;
 				}
@@ -240,7 +253,7 @@ public class BSMS {
 		rs.close();
 	}
 
-	public boolean sendSMS(String number, String message, String linkId, String smsID, String orgID, boolean isRetry) {
+	public boolean sendSMS(String number, String message, String smsID, String orgID, boolean isRetry) {
 		boolean isSent = false;
 		
 		if(message == null) return isSent;
@@ -248,7 +261,7 @@ public class BSMS {
 		if(smsOrgs.get(orgID)[8] == null) return isSent;
 		
 		int smsLen = message.length();
-		Integer messageParts = new Integer(1);
+		Integer messageParts = 1;
 		if(smsLen > 160) {
 			messageParts = 1 + (smsLen / 153);
 		}
@@ -261,17 +274,21 @@ public class BSMS {
 
 		int retry = 1;
 		while(retry != 0) {
-			if(retry > 1) System.out.println("MESSAGE RESENDING RETRY\n");
+			if(retry > 1) System.out.println(number + " MESSAGE RESENDING RETRY\n");
 			String sendResults = null;
 			
 			boolean airtelNo = false;
 			if(airtelBlock1.contains(number.substring(0, 5))) airtelNo = true;
 			if(airtelBlock2.contains(number.substring(0, 6))) airtelNo = true;
 			
-			if(smsOrgs.get(orgID)[6] != null) {
+			if(smsOrgs.get(orgID)[10].equals("2")) { 				// For sending Afica is talking SMS
 				sendResults = aitSend(number, message, orgID);
+			} else if(smsOrgs.get(orgID)[10].equals("3")) { 		// For sending airTouch SMS
+				sendResults = airTouch(number, message, orgID);
+			} else if(smsOrgs.get(orgID)[10].equals("4")) { 		// For sending Hormuud SMS
+				sendResults = HormuudSend(number, message, orgID);
 			} else {
-				sendResults = sendSMS(number, message, linkId, orgID, correlator);
+				sendResults = sendSMS(number, message, orgID, correlator);
 			}
 			
 			if(sendResults == null) {	// retry once for a error on the sending
@@ -299,8 +316,10 @@ public class BSMS {
 		return isSent;
 	}
 		
-	public String sendSMS(String number, String message, String linkId, String orgID, String correlator) {
+	public String sendSMS(String number, String message, String orgID, String correlator) {
 		String sendResults = null;
+
+		if(safaricomSMS == null) return sendResults;
 		
 		String senderName = smsOrgs.get(orgID)[8];
 		JSONObject jResult = safaricomSMS.sendSMS(senderName, number, message, correlator);
@@ -308,34 +327,78 @@ public class BSMS {
 
 		return sendResults;
 	}
-	
+
 	public String aitSend(String number, String message, String orgID) {
 		String resp = "";
-		
+
 		String userName = smsOrgs.get(orgID)[6];
 		String apiKey = smsOrgs.get(orgID)[7];
-		
+		String senderName = smsOrgs.get(orgID)[8];
+
 		/* Initialize SDK */
 		AfricasTalking.initialize(userName, apiKey);
 
+		System.out.println("Africa is talking SMS : " + senderName);
+
 		/* Get the SMS service */
 		SmsService aitSms = AfricasTalking.getService(AfricasTalking.SERVICE_SMS);
-		
+
 		String[] recipients = new String[1];
 		recipients[0] = "+" + number;
-		
+
 		/* That’s it, hit send and we’ll take care of the rest */
 		try {
-			List<Recipient> response = aitSms.send(message, userName, recipients, true);
+			List<Recipient> response = aitSms.send(message, senderName, recipients, true);
 			for (Recipient recipient : response) {
 				resp = recipient.messageId;
-				System.out.println("Africa is talking SMS");
 				System.out.println(recipient.number + " : " + resp + " : " + recipient.status);
 			}
 		} catch(Exception ex) {
 			ex.printStackTrace();
 		}
-		
+
+		return resp;
+	}
+
+	public String airTouch(String number, String message, String OrgID){
+		String resp = "";
+
+		try{
+			OkHttpClient client = new OkHttpClient();
+			HttpUrl.Builder urlBuilder = HttpUrl.parse("https://client.airtouch.co.ke:9012/sms/api").newBuilder();
+			urlBuilder.addQueryParameter("issn", "FCM_TRAVEL");
+			urlBuilder.addQueryParameter("msisdn", number);
+			urlBuilder.addQueryParameter("text",message);
+			urlBuilder.addQueryParameter("username", "travel");
+			urlBuilder.addQueryParameter("password", "afd1d26c7571daeb3aa87c0d4a9521c0");
+			String url = urlBuilder.build().toString();
+			System.out.println("Airtouch SMS " + url);
+
+			Request request = new Request.Builder()
+                     .url(url)
+                     .build();
+			Response response = client.newCall(request).execute();
+			resp = response.toString();
+			
+		}catch(Exception e){
+			log.info("Air Touch Error:"+e);
+		}
+
+		return resp;
+	}
+
+	public String HormuudSend(String number, String message, String orgID) {
+		String resp = "";
+
+		String userName = smsOrgs.get(orgID)[6];
+		String apiKey = smsOrgs.get(orgID)[7];
+		String senderName = smsOrgs.get(orgID)[8];
+
+		System.out.println("Auth " + orgID + " " + userName + " " + apiKey);
+
+		BHormuudSMS hormuud = new BHormuudSMS(userName, apiKey);
+		resp = hormuud.sendSMS(number, message);
+
 		return resp;
 	}
 

@@ -1,0 +1,238 @@
+.page-container {
+    background-color: white;
+}
+.page-content-wrapper {
+    margin-top: 0px;
+}
+.page-content-wrapper .page-content {
+    margin-left: 0px;
+}
+.result_job {
+    font-family: 'Gotham Book';
+    padding: 20px;
+    box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+    margin-bottom: 30px;
+    width: 30%;
+}
+.job_title {
+    color: #0072b8;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+.job_category_name {
+    margin-bottom: 5px;
+}
+.job_category {
+    display: block;
+    text-align: left;
+    margin-bottom: 5px;
+}
+.job-listing__category-line {
+    border-bottom: 1px solid rgba(74,21,75,.25);
+    width: 100%;
+}
+.job-listing__category-title{
+    margin-top:-1.5rem;
+    border-radius:100px;
+    background-color: #0072b8;
+    padding:1rem 1.2rem;
+    color:white;
+    line-height:1.34rem;
+    letter-spacing:.2px;
+    font-weight:700;
+    width: 20%;
+}
+.job_action {
+    width: 100%;
+    display: block;
+    text-align: left;
+    margin-top: 30px;
+    margin-bottom: 20px;
+}
+.button.hollow.primary {
+    border-radius: 35px;
+    padding: 15px 45px;
+    background-color: #0072b8;
+    color: white;
+    font-weight: bold;
+    border: none;
+}
+.button.hollow.primary:hover, .button.hollow.primary:focus {
+    background-color: white;
+    text-decoration: none;
+    color: #0072b8;
+    border: 2px solid #0072b8;
+}
+.page-header.navbar {
+    background: #f5f7fa;
+}
+.portlet-body h4 {
+    position: relative;
+    margin-left: 10%;
+    display: inline-block;
+    top: -100px;
+}
+.portletimg {
+    display: inline-block;
+    width: 50%;
+    margin-left: 25%;
+}
+.recruitment_title {
+    text-align: left;
+    max-width: 45%;
+    font-size: 4.5rem;
+    margin-top: -390px;
+}
+.industry-box-inner {
+    position: absolute;
+    z-index: 1;
+    height: 50%;
+    width: 26%;
+    /* top: -10px; */
+    opacity: .5;
+    border-radius: 25px;
+    background: linear-gradient(180deg,#169bed 0%,rgba(4,23,41,0) 50%);
+    -webkit-filter: blur(6px);
+    -moz-filter: blur(6px);
+    -o-filter: blur(6px);
+    -ms-filter: blur(6px);
+    filter: blur(6px);
+    -webkit-transition: all .2s;
+    transition: all .2s
+}
+.industry-stat-box.light-bg {
+    background: linear-gradient(180deg,white 50%,rgba(255,255,255,0) 100%);
+    padding: 75px 50px;
+    position: relative;
+    z-index: 2;
+    max-width: 100%;
+    height: 330px;
+    border-radius: 18px;
+    margin: 12px 12px;
+}
+.industry-stat-box.light-bg h3 {
+    font-size: 21px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+.coleq {
+    width: 30%;
+    margin-right: 93px;
+    float: left;
+    margin-left: -60px;
+}
+.left {
+    float: left;
+    /* width: 50%; */
+    position: relative;
+    top: -80px;
+    left: 5%;
+}
+@media (max-width: 1240px) {
+    .recruitment_title {
+        font-size: 4rem;
+        margin-top: -370px;
+    }
+    .coleq {
+        margin-left: -80px;
+        margin-right: 110px;
+    }
+}
+@media (max-width: 1160px) {
+    .industry-box-inner {
+        width: 83%;
+        background: linear-gradient(180deg,#169bed 0%,rgba(4,23,41,0) 30%);
+    }
+    .coleq {
+        width: 100%;
+    }
+}
+@media (max-width: 1155px) {
+   .portletimg {
+        display: none;
+   }
+   .recruitment_title {
+        font-size: 4rem;
+        margin-top: 0px;
+        max-width: 100%;
+    }
+    .portlet-body h4 {
+        top:30px;
+    }
+}
+@media (max-width: 1120px) {
+    .job_action {
+        display: block;
+        width: 100%;
+        text-align: left;
+        margin-top: 35px;
+        margin-bottom: 20px;
+    }
+    .industry-box-inner {
+        width: 81%;
+        background: linear-gradient(180deg,#169bed 0%,rgba(4,23,41,0) 30%);
+    }
+}
+@media (max-width: 991px) {
+    .ptopheader {
+        text-align: center;
+        margin-left: 0 !important;
+    }
+    .clearfix {
+        background-color: white;
+    }
+    .industry-box-inner {
+        width: 79%;
+        background: linear-gradient(180deg,#169bed 0%,rgba(4,23,41,0) 30%);
+    }
+}
+@media (max-width: 900px) {
+    .left{
+        /* display: block; */
+        width: 100% !important;
+        padding-right: 5% !important;
+        border-bottom: 1px solid #808080;
+    }
+}
+@media (max-width: 767px) {
+    .page-header.navbar .page-top {
+        display: none;
+    }
+    .industry-box-inner {
+        width: 73%;
+        background: linear-gradient(180deg,#169bed 0%,rgba(4,23,41,0) 30%);
+    }
+}
+@media (max-width: 760px) {
+    .job-listing__category-title  {
+        width: 60%;
+    }
+}
+@media (max-width: 500px) {
+    .industry-box-inner {
+        width: 76%;
+        background: linear-gradient(180deg,#169bed 0%,rgba(4,23,41,0) 20%);
+        left: 55px;
+    }
+    .coleq {
+        margin-left: -110px;
+        margin-right: 0;
+    }
+    .industry-stat-box.light-bg {
+        max-width: 450px;
+        width: 330px;
+    }
+    .recruitment_title {
+        font-size: 2.8rem;
+    }
+}
+@-moz-document url-prefix() {
+    .coleq {
+        margin-top: -290px;
+    }
+}
+@media all and (min--moz-device-pixel-ratio:0) and (max-width: 1200px){
+    .coleq {
+        margin-top: 0px;
+    }
+}

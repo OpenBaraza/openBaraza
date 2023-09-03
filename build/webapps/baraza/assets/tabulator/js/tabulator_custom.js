@@ -26,7 +26,8 @@ var dateEditor = function(cell, onRendered, success, cancel){
 
 	function onChange(){
 	    if(input.value != cellValue){
-	        success(moment(input.value, "YYYY-MM-DD").format("DD/MM/YYYY"));
+	        //success(moment(input.value, "YYYY-MM-DD").format("DD/MM/YYYY"));
+			success(input.value);
 	    }else{
 	        cancel();
 	    }

@@ -64,13 +64,16 @@ public class BMail {
 
 	public BMail(BElement root, BLogHandle logHandle) {
 		logHandle.config(log);
-		String mailuser = root.getAttribute("mailuser", "");
-		String mailpassword = root.getAttribute("mailpassword", "");
+		String mailUser = root.getAttribute("mailuser", "");
+		String mailPassword = root.getAttribute("mailpassword", "");
 		String host = root.getAttribute("host", "");
+		
 		String imaphost = root.getAttribute("imaphost", host);
+		String imapUser = root.getAttribute("imapuser", mailUser);
+		String imapPassword = root.getAttribute("imappassword", mailPassword);
 		int imapPort = 143;
-		String maildomain = root.getAttribute("maildomain");
-		if(maildomain != null) mailuser = mailuser + "@" + maildomain;
+		String mailDomain = root.getAttribute("maildomain");
+		if(mailDomain != null) mailUser = mailUser + "@" + mailDomain;
 
 		mailFrom = root.getAttribute("mailfrom", "root");
 		inbox = root.getAttribute("inbox", "INBOX");
@@ -102,14 +105,14 @@ public class BMail {
 				System.clearProperty("mail.imap.auth.ntlm.disable");
 				System.clearProperty("mail.imaps.auth.ntlm.domain");
 			}
-
+			
 			if (smtptls.equals("true")) {
 				props.put("mail.smtp.auth", "true");
 				props.put("mail.smtp.starttls.enable", "true");
 				props.put("mail.smtp.port", "587");
 				
-				final String mUser = mailuser;
-				final String mPassword = mailpassword;
+				final String mUser = mailUser;
+				final String mPassword = mailPassword;
 				session = Session.getInstance(props, new javax.mail.Authenticator() {
 					protected PasswordAuthentication getPasswordAuthentication() {
 						return new PasswordAuthentication(mUser, mPassword);
@@ -153,8 +156,8 @@ public class BMail {
 
 			// Get a Session object
 			if(googleAuth.equals("true")) {
-				final String mUser = mailuser;
-				final String mPassword = mailpassword;
+				final String mUser = mailUser;
+				final String mPassword = mailPassword;
 				session = Session.getInstance(props, new javax.mail.Authenticator() {
 					protected PasswordAuthentication getPasswordAuthentication() {
 						return new PasswordAuthentication(mUser, mPassword);
@@ -163,17 +166,29 @@ public class BMail {
 			} else {
 				session = Session.getInstance(props, null);
 			}
-			session.setDebug(false);
+
+			log.fine("Trying to connect to IMAP server");
+			if(root.getAttribute("debug") == null) session.setDebug(false);
+			else {session.setDebug(true); props.setProperty("mail.debug", "true"); }
 			store = session.getStore(imapType);
-			store.connect(imaphost, imapPort, mailuser, mailpassword);
+			store.connect(imaphost, imapPort, imapUser, imapPassword);
 			
+			log.info("Trying to connect to SMTP server");
 			if (smtppauth.equals("true")) {
 				props.setProperty("mail.smtp.auth", "true");
+				final String mUser = mailUser;
+				final String mPassword = mailPassword;
+				session = Session.getInstance(props, new javax.mail.Authenticator() {
+					protected PasswordAuthentication getPasswordAuthentication() {
+						return new PasswordAuthentication(mUser, mPassword);
+					}
+				});
+
 				trans = session.getTransport("smtp");
-		    	trans.connect(host, mailuser, mailpassword);
+		    	trans.connect(host, mailUser, mailPassword);
 		    } else if(smtptls.equals("true")) {
 				trans = session.getTransport();
-		    	trans.connect(host, mailuser, mailpassword);
+		    	trans.connect(host, mailUser, mailPassword);
 			} else {
 				System.clearProperty("mail.smtp.auth");
 				trans = session.getTransport("smtp");
@@ -182,9 +197,10 @@ public class BMail {
 			mailActive = true;
 		} catch (Exception ex) {
 			mailActive = false;
-			log.severe("Mail User " + mailuser);
+			log.severe("Mail User " + mailUser);
 			log.severe("Mail exception! " + ex);
 		}
+		log.fine("Mail client ready");
 	}
 
 	public void setAttachFile(String fileDir, String fileName) {
@@ -194,7 +210,7 @@ public class BMail {
 
 	public boolean sendMail(String messageTo, String ccTo, String replyTo, String subject, String myMail, boolean infile, Map<String, String> headers, Map<String, String> reports, Map<String, String> files) {
 		boolean sent = false;
-		
+
 		// if there is no address
 		if(messageTo == null) {
 			log.severe("The email has no recepient address");
@@ -230,7 +246,7 @@ public class BMail {
 				attachreport.setFileName(attachFile);
 				mp.addBodyPart(attachreport);
 			}
-			
+
 			for(String file : files.keySet()) {
 				MimeBodyPart attachment = new MimeBodyPart();
 				String fileName = files.get(file);
@@ -272,16 +288,21 @@ public class BMail {
 			if (folder == null) {
 		    	log.severe("Can't get record folder.");
 		    	return false;
+			} if (!folder.exists()) {
+				Folder inboxFolder = store.getFolder(inbox);
+				if(inboxFolder != null) folder = inboxFolder.getFolder(sentbox);
+				if (folder == null) return false;
 			}
 			if (!folder.exists()) folder.create(Folder.HOLDS_MESSAGES);
 			Message[] messages = new Message[1];
 			messages[0] = message;
 			folder.appendMessages(messages);
 
-			log.fine("Mail was recorded successfully.");
+			log.info("Mail was sent successfully.");
 			sent = true;
 		} catch (Exception ex) {
-			mailActive = false;		
+			log.severe("Got Exception: " + ex);
+			mailActive = false;
 	    	if (ex instanceof SendFailedException) {
 				MessagingException sfe = (MessagingException)ex;
 				if (sfe instanceof SMTPSendFailedException) {
@@ -306,6 +327,9 @@ public class BMail {
 						errMsg += "\n  RetCode: " + ssfe.getReturnCode();
 						errMsg += "\n  Response: " + ssfe.getMessage();
 						log.severe(errMsg);
+
+						sent = true;		// Indicate email sent even if the address is wrong
+						mailActive = true;
 					} else if (sfe instanceof SMTPAddressSucceededException) {
 						SMTPAddressSucceededException ssfe = (SMTPAddressSucceededException)sfe;
 						String errMsg = "ADDRESS SUCCEEDED : " + ssfe.toString();
@@ -313,11 +337,9 @@ public class BMail {
 						errMsg += "\n  Command: " + ssfe.getCommand();
 						errMsg += "\n  RetCode: " + ssfe.getReturnCode();
 						errMsg += "\n  Response: " + ssfe.getMessage();
-						log.fine(errMsg);
+						log.severe(errMsg);
 					}
 				}
-	    	} else {
-				log.severe("Got Exception: " + ex);
 	    	}
 		}
 

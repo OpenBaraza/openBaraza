@@ -16,7 +16,6 @@ import java.awt.BorderLayout;
 import java.awt.event.WindowListener;
 import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
-import javax.swing.JApplet;
 import javax.swing.UIManager;
 
 import org.baraza.xml.BXML;
@@ -28,7 +27,7 @@ import org.baraza.server.tomcat.BTomcat;
 import org.baraza.server.BServer;
 import org.baraza.server.BClient;
 
-public class Baraza extends JApplet implements WindowListener {
+public class Baraza implements WindowListener {
 	Logger log = Logger.getLogger(Baraza.class.getName());
 	BApp app = null;
 	BIDE ide = null;
@@ -105,20 +104,6 @@ public class Baraza extends JApplet implements WindowListener {
 		}
 	}
 
-	/**
-	* Run an applet
-	*/
-	public void init() {
-		String config = getParameter("config");
-		String mode = getParameter("mode");
-		String dbpath = getParameter("dbpath");
-		String configFile = getParameter("configfile");
-		String encryptionKey = getParameter("encryptionkey");
-
-		int sm = start(config, mode, dbpath, configFile, encryptionKey);
-		if(sm == 0) getContentPane().add(app);
-		else if(sm == 1) getContentPane().add(ide);
-	}
 
 	/**
 	* Get start up parametrs and determine how the application starts
@@ -136,11 +121,16 @@ public class Baraza extends JApplet implements WindowListener {
 		int sm = 0;
 		BXML xml = null;
 		
+		System.out.println("Encription key " + encryptionKey);
+		
 		if(encryptionKey == null) {
 			if(configFile == null) configFile = "config.xml";
 			xml = new BXML(configDir + configFile, false);
 		} else {
 			if(configFile == null) configFile = "config.cph";
+			
+			System.out.println("Config Dir : " + configDir);
+			System.out.println("XML File : " + configFile);
 
 			// Create encrypter/decrypter class and encrypt
 			BDesEncrypter decrypter = new BDesEncrypter(encryptionKey);
@@ -171,11 +161,15 @@ public class Baraza extends JApplet implements WindowListener {
 		}
 
 		try {
-			UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
-			//UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+			//UIManager.setLookAndFeel("com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel");
+			UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
 		} catch (Exception ex) {
 			System.out.println("Error Loading the look : " + ex);
 		}
+
+		// Check available look and feel
+		//UIManager.LookAndFeelInfo[] looks = UIManager.getInstalledLookAndFeels();
+		//for (UIManager.LookAndFeelInfo look : looks) { System.out.println(look.getClassName()); }
 
 		switch (sm) {
 			case 0:			// Load the application

@@ -35,7 +35,7 @@ public class BClient {
         
 		BXML xml = new BXML(configDir + "config.xml", false);
 		BElement root = xml.getRoot();
-		Integer portNumber = new Integer(root.getAttribute("port", "7777"));
+		Integer portNumber = Integer.valueOf(root.getAttribute("port", "7777"));
         
 		try {
 			kkSocket = new Socket("localhost", portNumber.intValue());

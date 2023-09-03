@@ -21,26 +21,28 @@ import java.io.PrintWriter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.http.Part;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
 
 import org.json.JSONObject;
 import org.json.JSONArray;
 
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-
+import org.baraza.xml.BElement;
 import org.baraza.DB.BDB;
 import org.baraza.DB.BQuery;
 import org.baraza.DB.BImportVector;
+import org.baraza.utils.BWebUtils;
 import org.baraza.utils.BWebdav;
-import org.baraza.xml.BElement;
 
+@MultipartConfig(fileSizeThreshold = 1024 * 1024,
+	maxFileSize = 1024 * 1024 * 5,
+	maxRequestSize = 1024 * 1024 * 5 * 5)
 public class BWebFiles extends HttpServlet {
 	Logger log = Logger.getLogger(BWebFiles.class.getName());
 	
@@ -108,6 +110,9 @@ System.out.println("BASE serverport : " + request.getServerPort());
 		if(repositoryFolder == null) repositoryFolder = "";
 		else repositoryFolder +=  "/";
 
+		String username = context.getInitParameter("rep_username");
+		String password = context.getInitParameter("rep_password");
+
 		view = web.getView();
 System.out.println("BASE 1020 : " + view);
 		maxfs = (Long.valueOf(view.getAttribute("maxfilesize", "16777216"))).longValue(); 
@@ -118,9 +123,10 @@ System.out.println("BASE 1020 : " + view);
 
 		if(view.getName().equals("FILES")) {
 			String repository = webPath + view.getAttribute("repository") + repositoryFolder;
-			String username = view.getAttribute("username");
-			String password = view.getAttribute("password");
 			folder = view.getAttribute("folder");
+
+			if(username == null) username = view.getAttribute("username");
+			if(password == null) password = view.getAttribute("rep_password");
 			if(repository != null) webdav = new BWebdav(repository, username, password);
 
 System.out.println("BASE 1020 : " + repository);
@@ -143,33 +149,21 @@ System.out.println("BASE 1020 : " + repository);
 		String tmpPath = sc.getRealPath("/WEB-INF/tmp");
 		File yourTempDirectory = new File(tmpPath);
 		String fileName = null;
-		
-		// Create a factory for disk-based file items
-		DiskFileItemFactory factory = new DiskFileItemFactory(yourMaxMemorySize, yourTempDirectory);
-
-		// Create a new file upload handler
-		ServletFileUpload upload = new ServletFileUpload(factory);
 
 		try {
 			String orgID = db.getOrgID();
 			String userOrg = db.getUserOrg();
 			
 			Map<String, String> inParams = new HashMap<String, String>();
-			List items = upload.parseRequest(request);
-			Iterator itr = items.iterator();
-			while(itr.hasNext()) {
-				FileItem item = (FileItem) itr.next();
+			Map<String,String[]> paramMap = request.getParameterMap();
+			for(String paramName : paramMap.keySet()) inParams.put(paramName, paramMap.get(paramName)[0]);
 
-				if (item.isFormField()) {
-					String name = item.getFieldName();
-					String value = item.getString();
-					System.out.println(name + " = " + value);
-					inParams.put(name, value);
-				} else {
-					String contentType = item.getContentType();
-					String fieldName = item.getFieldName();
-					fileName = item.getName();
-					long fs = item.getSize();
+			for (Part part : request.getParts()) {
+				if((part.getContentType() != null) && (part.getSize() > 0)) {
+					String contentType = part.getContentType();
+					String fieldName = part.getName();
+					fileName = BWebUtils.getFileName(part.getHeader("content-disposition"));
+					long fs = part.getSize();
 					
 					if(fs < maxfs) {
 System.out.println("BASE IMPORT 1410 : " + fileName);
@@ -178,30 +172,30 @@ System.out.println("BASE IMPORT 1410 : " + fileName);
 						
 						if(importType.equals("excel")) {
 							String worksheet = view.getAttribute("worksheet", "0");
-							Integer firstRow = new Integer(view.getAttribute("firstrow", "0"));
-							iv.getExcelData(item.getInputStream(), fileName, worksheet, firstRow);
+							Integer firstRow = Integer.valueOf(view.getAttribute("firstrow", "0"));
+							iv.getExcelData(part.getInputStream(), fileName, worksheet, firstRow);
 						} else if(importType.equals("text")) {
-							iv.getTextData(item.getInputStream());
+							iv.getTextData(part.getInputStream());
 						} else if(importType.equals("record")) {
-							iv.getRecordData(item.getInputStream());
+							iv.getRecordData(part.getInputStream());
 						}
 						query.importData(iv.getData(), inParams);
 						iv.close();
 						
 						jShd.put("success", 1);
-						jShd.put("name", item.getName());
-						jShd.put("size", item.getSize());
+						jShd.put("name", fileName);
+						jShd.put("size", part.getSize());
 						jShd.put("message", "Process File");
 						resp = jShd.toString();
 					}
 				}
 			}
-		} catch (FileUploadException ex) {
-			System.out.println("File upload exception " + ex);
+		} catch(ServletException ex) {
+			log.severe("IO Error : " + ex);
 		} catch(IOException ex) {
-			System.out.println("File saving failed IO Exception " + ex);
+			log.severe("File saving failed IO Exception " + ex);
 		}  catch(Exception ex) {
-			System.out.println("File saving failed Exception " + ex);
+			log.severe("File saving failed Exception " + ex);
 		}
 		
 System.out.println("BASE IMPORT 1420 : " + resp);
@@ -213,80 +207,62 @@ System.out.println("BASE IMPORT 1420 : " + resp);
 		String resp = "{\"success\": 0, \"message\": \"Upload Failed\"}";
 
 		int yourMaxMemorySize = 262144;
-		
-		ServletContext sc = getServletContext();
-		String tmpPath = sc.getRealPath("/WEB-INF/tmp");
-		File yourTempDirectory = new File(tmpPath);
-		
-		// Create a factory for disk-based file items
-		DiskFileItemFactory factory = new DiskFileItemFactory(yourMaxMemorySize, yourTempDirectory);
-
-		// Create a new file upload handler
-		ServletFileUpload upload = new ServletFileUpload(factory);
 
 		try {
-			List items = upload.parseRequest(request);
-			Iterator itr = items.iterator();
 			String narrative = request.getParameter("narrative");
-			while(itr.hasNext()) {
-				FileItem item = (FileItem) itr.next();
+			for (Part part : request.getParts()) {
+				String contentType = part.getContentType();
+				String fieldName = part.getName();
+				String fileName = BWebUtils.getFileName(part.getHeader("content-disposition"));
+				long fs = part.getSize();
 
-				if (item.isFormField()) {
-					String name = item.getFieldName();
-					String value = item.getString();
-					System.out.println(name + " = " + value);
-				} else {
-					String contentType = item.getContentType();
-					String fieldName = item.getFieldName();
-					String fileName = item.getName();
-					long fs = item.getSize();
-
-					if(fs < maxfs) {
+				if((part.getContentType() != null) && (part.getSize() > 0) && (fs < maxfs)) {
 System.out.println("BASE 1410 : " + fileName);
-						String orgID = db.getOrgID();
-						String userOrg = db.getUserOrg();
-						String userID = db.getUserID();
+					String orgID = db.getOrgID();
+					String userOrg = db.getUserOrg();
+					String userID = db.getUserID();
 System.out.println("BASE 1420 : " + orgID + " : " + userOrg + " : " + userID);
 System.out.println("BASE 1405 : " + narrative);
-						query.recAdd();
-						query.updateField("file_name", fileName);
-						if(linkField != null) query.updateField(linkField, linkValue);
-						if(userField != null) query.updateField(userField, userID);
-						if(fileTable != null) query.updateField("table_name", fileTable);
-						if(contentType != null) query.updateField("file_type", contentType);
-						if(narrative != null) query.updateField("narrative", narrative);
-						if(orgID != null) query.updateField(orgID, userOrg);
-						query.updateField("file_size", String.valueOf(fs));
+					query.recAdd();
+					query.updateField("file_name", fileName);
+					if(linkField != null) query.updateField(linkField, linkValue);
+					if(userField != null) query.updateField(userField, userID);
+					if(fileTable != null) query.updateField("table_name", fileTable);
+					if(contentType != null) query.updateField("file_type", contentType);
+					if(narrative != null) query.updateField("narrative", narrative);
+					if(orgID != null) query.updateField(orgID, userOrg);
+					query.updateField("file_size", String.valueOf(fs));
+System.out.println("BASE 1415 : ");
 
-						String ext = ".dat";
-						if(fileName.lastIndexOf(".")>0) ext = fileName.substring(fileName.lastIndexOf("."));
-						if(ext == null) ext = ".dat";
-						
-						query.recSave();
-						String folder_name = "";
-						if(folder != null) {
-							folder_name = query.getString(folder) + "/";
+					String ext = ".dat";
+					if(fileName.lastIndexOf(".") > 0) ext = fileName.substring(fileName.lastIndexOf("."));
+					if(ext == null) ext = ".dat";
+					if(ext.equals(".jsp")) return resp;
+
+					query.recSave();
+					String folder_name = "";
+					if(folder != null) {
+						folder_name = query.getString(folder) + "/";
 System.out.println("BASE 1420 : " + folder_name);
-							if(!webdav.fileExists(folder_name)) webdav.createDir(folder_name);
-							webdav.listDir(folder_name);
-						}
-						String wdfn = folder_name + query.getKeyField() + "ob" + ext;
+						if(!webdav.fileExists(folder_name)) webdav.createDir(folder_name);
+						webdav.listDir(folder_name);
+					}
+					String wdfn = folder_name + query.getKeyField() + "ob" + ext;
 
 System.out.println("BASE 1440 : " + wdfn);
 
-						webdav.saveFile(item.getInputStream(), wdfn);
-					}
+					webdav.saveFile(part.getInputStream(), wdfn);
 				}
 			}
 			resp = "{\"success\": 1, ";
 			if(narrative != null) resp += "\"narrative\": \"" + narrative + "\", ";
 			resp += "\"message\": \"Upload Sucessful\"}";
-		} catch (FileUploadException ex) {
-			System.out.println("File upload exception " + ex);
 		} catch(IOException ex) {
-			System.out.println("File saving failed IO Exception " + ex);
+			log.severe("IO Error : " + ex);
+		} catch(ServletException ex) {
+			log.severe("IO Error : " + ex);
 		}  catch(Exception ex) {
-			System.out.println("File saving failed Exception " + ex);
+			log.severe("File saving failed Exception " + ex);
 		}
 
 		return resp;

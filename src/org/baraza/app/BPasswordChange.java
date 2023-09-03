@@ -90,6 +90,7 @@ public class BPasswordChange extends JInternalFrame implements ActionListener {
 			if(newpassword.equals(confpassword)) {
 				String mysql = "SELECT " + fnct + "('" + db.getUserID() + "', '" + oldpassword + "','";
 				mysql += newpassword + "')";
+				//System.out.println(mysql);
 				mysql = db.executeFunction(mysql);
 				
 				JOptionPane.showMessageDialog(panel, mysql, mysql, JOptionPane.ERROR_MESSAGE);

@@ -189,7 +189,7 @@ public class BImportModel extends AbstractTableModel {
        	fireTableChanged(null); // Tell the listeners a new table has arrived.		
 	}
 
-	public void getExcelData(JPanel panel, String worksheet) { // Get all rows.
+	public void getExcelData(JPanel panel, String worksheet, Integer firstRow) { // Get all rows.
 		String fileName = "";
 		rows.removeAllElements();
 
@@ -209,10 +209,11 @@ public class BImportModel extends AbstractTableModel {
 			}
 
 			Sheet sheet = wb.getSheetAt(Integer.valueOf(worksheet));
+			if(firstRow < sheet.getFirstRowNum()) firstRow = sheet.getFirstRowNum();
 			Row row = null;
 			int i = 0;			
 			String myline = "";
-			for(i = sheet.getFirstRowNum(); i <= sheet.getLastRowNum(); i++) {
+			for(i = firstRow; i <= sheet.getLastRowNum(); i++) {
 				Vector<Object> myvec = new Vector<Object>();
 				row = sheet.getRow(i);
 				if(row != null)  {

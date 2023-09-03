@@ -103,7 +103,7 @@ public class BReportMaker {
 
 		for(int i = 0; i < query.getColumnCount(); i++) {
 			x = 1 + (i * w);
-			myReport += "				<textField isStretchWithOverflow=\"true\" isBlankWhenNull=\"true\">\n";
+			myReport += "				<textField isBlankWhenNull=\"true\">\n";
 			myReport += "					<reportElement style=\"Detail\" x=\"" + Integer.toString(x) + "\" y=\"0\"";
 			myReport += " width=\"" + Integer.toString(w) + "\" height=\"15\"/>\n";
 			myReport += "					<textElement>\n";
@@ -254,7 +254,7 @@ public class BReportMaker {
 
 		for(int i = 0; i < query.getColumnCount(); i++) {
 			x = 1 + (i * w);
-			myReport += "				<textField isStretchWithOverflow=\"true\" isBlankWhenNull=\"true\">\n";
+			myReport += "				<textField isBlankWhenNull=\"true\">\n";
 			myReport += "					<reportElement style=\"Detail\" x=\"" + Integer.toString(x) + "\" y=\"0\"";
 			myReport += " width=\"" + Integer.toString(w) + "\" height=\"15\"/>\n";
 			myReport += "					<textElement>\n";
@@ -388,7 +388,7 @@ public class BReportMaker {
 
 		for(int i = 0; i < query.getColumnCount(); i++) {
 			x = 1 + (i * w);
-			myReport += "				<textField isStretchWithOverflow=\"true\" isBlankWhenNull=\"true\">\n";
+			myReport += "				<textField isBlankWhenNull=\"true\">\n";
 			myReport += "					<reportElement style=\"Detail\" x=\"" + Integer.toString(x) + "\" y=\"0\"";
 			myReport += " width=\"" + Integer.toString(w) + "\" height=\"15\"/>\n";
 			myReport += "					<textElement>\n";

@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Enumeration;
 import java.util.logging.Logger;
+import java.util.Base64;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -29,7 +31,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.json.JSONObject;
 import org.json.JSONArray;
@@ -79,6 +81,15 @@ public class BWebUtils {
 		}
 		return jb.toString();
 	}
+
+	public static String getFileName(String htmlHeader) {
+		for (String content : htmlHeader.split(";")) {
+			if (content.trim().startsWith("filename")) {
+				return content.substring(content.indexOf("=") + 2, content.length() - 1);
+			}
+		}
+		return "tmpfile";
+	}
 	
 	public static String createToken(String tokenKey, String userId, Integer orgId) {
 		String token = null;
@@ -88,8 +99,6 @@ public class BWebUtils {
 				.withSubject(userId)
 				.withClaim("orgId", orgId.toString())
 				.sign(algorithm);
-		} catch (UnsupportedEncodingException ex){
-			log.severe("UnsupportedEncodingException : " + ex);
 		} catch (JWTCreationException ex){
 			log.severe("JWTCreationException : " + ex);
 		}
@@ -104,8 +113,35 @@ public class BWebUtils {
 			JWTVerifier verifier = JWT.require(algorithm).withIssuer("auth0").build(); 
 			DecodedJWT jwt = verifier.verify(token);
 			payLoad = jwt.getSubject();
-		} catch (UnsupportedEncodingException ex){
-			log.severe("UnsupportedEncodingException : " + ex);
+		} catch (JWTVerificationException ex){
+			log.severe("JWTVerificationException : " + ex);
+		}
+		return payLoad;
+	}
+	
+	public static String decodeTokenOrg(String tokenKey, String token, String claimName) {
+		String payLoad = null;
+		try {
+			Algorithm algorithm = Algorithm.HMAC256(tokenKey);
+			JWTVerifier verifier = JWT.require(algorithm).withIssuer("auth0").build(); 
+			DecodedJWT jwt = verifier.verify(token);
+			if (jwt.getClaims().containsKey(claimName)) payLoad = jwt.getClaims().get(claimName).asString();
+		} catch (JWTVerificationException ex){
+			log.severe("JWTVerificationException : " + ex);
+		}
+		return payLoad;
+	}
+	
+	public static Map<String, String> decodeTokenMap(String tokenKey, String token) {
+		Map<String, String> payLoad = new HashMap<String, String>();
+		try {
+			Algorithm algorithm = Algorithm.HMAC256(tokenKey);
+			JWTVerifier verifier = JWT.require(algorithm).withIssuer("auth0").build(); 
+			DecodedJWT jwt = verifier.verify(token);
+			
+			payLoad.put("userId", jwt.getSubject());
+			for(String claimName : jwt.getClaims().keySet())
+				payLoad.put(claimName, jwt.getClaim(claimName).asString());
 		} catch (JWTVerificationException ex){
 			log.severe("JWTVerificationException : " + ex);
 		}
@@ -323,6 +359,39 @@ public class BWebUtils {
 
 		return jShd.toString();
 	}
+	
+	public static String authenticate(String myURL, String appKey, String appPass) {
+		String auth = null;
+		if(appKey == null || appPass == null) return auth;
+		
+		try {
+			String authUser = Base64.getEncoder().encodeToString(appKey.getBytes("UTF-8"));
+			String authPass = Base64.getEncoder().encodeToString(appPass.getBytes("UTF-8"));
+
+			OkHttpClient client = new OkHttpClient();
+			Request request = new Request.Builder()
+				.url(myURL)
+				.get()
+				.addHeader("action", "authorization")
+				.addHeader("authUser", authUser)
+				.addHeader("authPass", authPass)
+				.addHeader("cache-control", "no-cache")
+				.build();
+			Response response = client.newCall(request).execute();
+			String rBody = response.body().string();
+			System.out.println("Resp : " + rBody);
+			
+			JSONObject jResp = new JSONObject(rBody);
+			int ResultCode = jResp.getInt("ResultCode");
+			if(jResp.has("ResultCode") && (jResp.getInt("ResultCode") == 0)) {
+				auth = jResp.getString("access_token");
+			}
+		} catch(IOException ex) {
+			System.out.println("IO Error : " + ex);
+		}
+
+		return auth;
+	}
 
 	public static String sendData(String myURL, String auth, String action, String data) {
 		String resp = null;
@@ -330,7 +399,7 @@ public class BWebUtils {
 		try {			
 			OkHttpClient client = new OkHttpClient();
 			MediaType mediaType = MediaType.parse("application/json");
-			RequestBody body = RequestBody.create(mediaType, data);
+			RequestBody body = RequestBody.create(data, mediaType);
 			Request request = new Request.Builder()
 				.url(myURL)
 				.post(body)

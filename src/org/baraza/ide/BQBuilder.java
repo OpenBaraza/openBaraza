@@ -13,7 +13,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.awt.BorderLayout;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 import javax.swing.JTextField;
 import javax.swing.JLabel;
@@ -30,10 +32,23 @@ import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JFileChooser;
 
+import java.awt.BorderLayout;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
+
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormat;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.commons.lang3.StringUtils;
 
 import org.baraza.DB.*;
 import org.baraza.app.*;
@@ -76,10 +91,10 @@ public class BQBuilder extends JPanel implements ActionListener, MouseListener {
 		controls = new JPanel();
 		super.add(controls, BorderLayout.PAGE_START);
 
-		String[] btArray = {"New", "Delete Field", "Reload", "Refresh", "View", "Execute", "Export", "Linked XML", 
+		String[] btArray = {"New", "Delete Field", "Reload", "Refresh", "View", "Execute", "Export", "Excel", "Linked XML",
 			"Portrait Report", "Landscape Report", "Sub Report", "Save Report"};
 		button = new JButton[btArray.length];		
-		for(int i = 0; i < 8; i++) {
+		for(int i = 0; i < 9; i++) {
 			button[i] = new JButton(btArray[i]);
 			button[i].addActionListener(this);
 			controls.add(button[i]);
@@ -129,7 +144,7 @@ public class BQBuilder extends JPanel implements ActionListener, MouseListener {
 		txtReportName = new JTextField(15);
 		reportControls.add(new JLabel("Report Name : "));
 		reportControls.add(txtReportName);
-		for(int i = 8; i < 12; i++) {
+		for(int i = 9; i <= 12; i++) {
 			button[i] = new JButton(btArray[i]);
 			button[i].addActionListener(this);
 			reportControls.add(button[i]);
@@ -290,6 +305,59 @@ public class BQBuilder extends JPanel implements ActionListener, MouseListener {
 		}
 	}
 
+	public void getGridExcel(String fileName) {
+		String mySql =  sqlText.getText().trim();
+		if(!mySql.toUpperCase().startsWith("SELECT")) return;
+
+		BQuery xlsData = new BQuery(db, mySql);
+
+		Workbook wb = new XSSFWorkbook();
+		CreationHelper createHelper = wb.getCreationHelper();
+		Sheet sheet = wb.createSheet("report");
+
+		CellStyle titleStyle = wb.createCellStyle();
+		Font font = wb.createFont();
+		font.setBold(true);
+		titleStyle.setFont(font);
+
+		Row row = null; Cell cell = null;
+		int rc = 0;
+
+		row = sheet.createRow(rc);
+		int cc = 0;
+		for(String colTitle : xlsData.getColumnNames()) {
+			colTitle = colTitle.replace("_", " ");
+			colTitle = StringUtils.capitalize(colTitle);
+			cell = row.createCell(cc);
+			cell.setCellValue(colTitle);
+			cell.setCellStyle(titleStyle);
+			cc++;
+		}
+
+		xlsData.beforeFirst();
+		while(xlsData.moveNext()) {
+			rc++;
+			row = sheet.createRow(rc);
+			for(cc = 0; cc < xlsData.getColumnCount(); cc++) {
+				cell = row.createCell(cc);
+				cell.setCellValue(xlsData.readField(cc + 1));
+			}
+		}
+		xlsData.close();
+
+		for(cc = 0; cc < xlsData.getColumnCount(); cc++) {
+			sheet.autoSizeColumn(cc);
+		}
+
+		try {
+			FileOutputStream out = new FileOutputStream(new File(fileName));
+            wb.write(out);
+            out.close();
+		} catch(IOException ex) {
+			System.out.println("IO Excel export error : " + ex);
+		}
+	}
+
 	public void actionPerformed(ActionEvent ev) {
 		String aKey = ev.getActionCommand();
 
@@ -297,6 +365,13 @@ public class BQBuilder extends JPanel implements ActionListener, MouseListener {
 			executeQuery();
 		} else if("Export".equals(aKey)) {
 			exportData();
+		} else if("Excel".equals(aKey)) {
+			JFileChooser fc = new JFileChooser();
+			int returnVal = fc.showSaveDialog(this);
+			if ((tableModel != null) && (returnVal == JFileChooser.APPROVE_OPTION)) {
+				String fileName = fc.getSelectedFile().getAbsolutePath() + ".xlsx";
+				getGridExcel(fileName);
+			}
 		} else if ("New".equals(aKey)) {			
 			defModel.clear();
 		} else if ("Delete Field".equals(aKey)) {

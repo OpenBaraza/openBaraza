@@ -14,9 +14,11 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.io.IOException;
 import java.sql.Timestamp;
 import java.sql.Time;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 import javax.swing.JPanel;
 import javax.swing.JButton;
@@ -43,6 +45,17 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
+
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormat;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
 
 import org.baraza.xml.*;
 import org.baraza.DB.*;
@@ -253,15 +266,20 @@ class BGrids extends JPanel implements ActionListener, MouseListener {
 		}
 		
 		boolean canDel = false;
+		boolean isExcelExport = false;
+		boolean isCsvExport = false;
 		if(view.getAttribute("del", "false").equals("true")) canDel = true;
 		if(view.getAttribute("delete", "false").equals("true")) canDel = true;
+		if(view.getAttribute("grid.export", "true").equals("true")) isCsvExport = true;
+		if(view.getAttribute("excel.export", "true").equals("true")) isExcelExport = true;
 
 		gridFunct = new ArrayList<JButton>();
 		gridControls =  new JPanel();
 		gridFunct.add(new JButton("New"));
 		gridFunct.add(new JButton("Refresh"));
 		if(canDel) gridFunct.add(new JButton("Delete"));
-		gridFunct.add(new JButton("Export"));
+		if(isCsvExport) gridFunct.add(new JButton("Export"));
+		if(isExcelExport) gridFunct.add(new JButton("Excel"));
 
 		BElement impEl = view.getElementByName("IMPORT");
 		if(impEl != null) gridFunct.add(new JButton("Import"));
@@ -302,6 +320,104 @@ class BGrids extends JPanel implements ActionListener, MouseListener {
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
 			String filename = fc.getSelectedFile().getAbsolutePath() + ".csv";
 			tableModel.savecvs(filename);
+		}
+	}
+	
+	public void exportExcel() {
+		JFileChooser fc = new JFileChooser();
+		int returnVal = fc.showSaveDialog(this);
+		if (returnVal == JFileChooser.APPROVE_OPTION) {
+			String fileName = fc.getSelectedFile().getAbsolutePath() + ".xlsx";
+			BQuery xlsData = tableModel.getQuery();
+
+			Workbook wb = new XSSFWorkbook();
+			CreationHelper createHelper = wb.getCreationHelper();
+			Sheet sheet = wb.createSheet(view.getAttribute("name", "report"));
+
+			DataFormat format = wb.createDataFormat();
+			CellStyle numberStyle = wb.createCellStyle();
+			numberStyle.setDataFormat(format.getFormat("#,###.0"));
+			CellStyle dateStyle = wb.createCellStyle();
+			dateStyle.setDataFormat(createHelper.createDataFormat().getFormat("dd/mm/yyyy"));
+
+			CellStyle titleStyle = wb.createCellStyle();
+			Font font = wb.createFont();
+			font.setBold(true);
+			titleStyle.setFont(font);
+
+			Cell cell;
+			Row row = sheet.createRow(0);
+			int cc = 0;
+			for(BElement el : view.getElements()) {
+				String colTitle = el.getAttribute("title");
+				if(!el.getValue().equals("") && (colTitle != null)) {
+					cell = row.createCell(cc);
+					cell.setCellValue(colTitle);
+					cell.setCellStyle(titleStyle);
+					cc++;
+				}
+			}
+
+			boolean cellHide = false;
+			String cellStr = null;
+			String sRepeat = null;
+			Map<String, String> mRepeat = new HashMap<String, String>();
+
+			int rc = 0;
+			xlsData.beforeFirst();
+			while(xlsData.moveNext()) {
+				cc = 0;
+				rc++;
+				row = sheet.createRow(rc);
+				for(BElement el : view.getElements()) {
+					String colName = el.getValue();
+					if(!colName.equals("") && (el.getAttribute("title") != null)) {
+						cellHide = false;
+						if(el.getAttribute("hide.repeat", "false").equals("true")) {
+							sRepeat = mRepeat.get(colName);
+							cellStr = xlsData.getString(colName);
+							if(sRepeat != null) {
+								if(sRepeat.equals(cellStr)) cellHide = true;
+							}
+							mRepeat.put(colName, cellStr);
+						}
+
+						if(cellHide) {
+							cell = row.createCell(cc);
+							cell.setCellValue("");
+						} else if(el.getName().equals("TEXTDECIMAL")) {
+							cell = row.createCell(cc);
+							cell.setCellValue(xlsData.getFloat(el.getValue()));
+							cell.setCellStyle(numberStyle);
+						} else if(el.getName().equals("TEXTDATE")) {
+							cell = row.createCell(cc);
+							cell.setCellValue(xlsData.getDate(el.getValue()));
+							cell.setCellStyle(dateStyle);
+						} else {
+							cell = row.createCell(cc);
+							cell.setCellValue(xlsData.formatData(el));
+						}
+
+						cc++;
+					}
+				}
+			}
+
+			cc = 0;
+			for(BElement el : view.getElements()) {
+				String colTitle = el.getAttribute("title");
+				if(!el.getValue().equals("") && (colTitle != null)) {
+					sheet.autoSizeColumn(cc);
+					cc++;
+				}
+			}
+
+			try {
+				FileOutputStream os = new FileOutputStream(fileName);
+				wb.write(os);
+			} catch(IOException ex) {
+				log.severe("IO Exception writing excel file : " + ex);
+			}
 		}
 	}
 
@@ -427,7 +543,7 @@ class BGrids extends JPanel implements ActionListener, MouseListener {
 		if(importProcess) {
 			if(view.getAttribute("process") != null) {
 				String updSQL = "SELECT " + view.getAttribute("process");
-				updSQL += "('" + db.getOrgID() + "', '" + db.getUserID() + "', '" + db.getUserIP() + "')";
+				updSQL += "('" + db.getUserOrgId() + "', '" + db.getUserID() + "', '" + db.getUserIP() + "')";
 				System.out.println(updSQL);
 				db.executeQuery(updSQL);
 			}
@@ -436,6 +552,8 @@ class BGrids extends JPanel implements ActionListener, MouseListener {
 			gridFunct.get(4).setText("Import");
 			importProcess = false;
 		} else {
+			if(linkValue != null) inParams.put("data", linkValue);
+			
 			BElement impEl = view.getElementByName("IMPORT");
 			if(impEl != null) {
 				BDB impDB = new BDB(impEl);
@@ -447,9 +565,10 @@ class BGrids extends JPanel implements ActionListener, MouseListener {
 				impDB.close();
 			} else if(importType != null) {
 				if(importType.equals("excel")) {
+					Integer firstRow = Integer.valueOf(view.getAttribute("firstrow", "0"));
 					BImportModel impExcel = new BImportModel(view);
 					String worksheet = view.getAttribute("worksheet", "0");
-					impExcel.getExcelData(this, worksheet);
+					impExcel.getExcelData(this, worksheet, firstRow);
 
 					tableModel.importData(impExcel.getData(), inParams);
 					tableModel.requery();
@@ -533,6 +652,8 @@ class BGrids extends JPanel implements ActionListener, MouseListener {
 			if(noDel == null) deleteRecords();
 		} else if("Export".equals(aKey)) {
 			exportData();
+		} else if("Excel".equals(aKey)) {
+			exportExcel();
 		} else if("Filter".equals(aKey)) {
 			filter();
 		} else if("Import".equals(aKey)) {

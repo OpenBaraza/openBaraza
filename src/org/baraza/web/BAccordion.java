@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.baraza.DB.BDB;
 import org.baraza.DB.BQuery;
@@ -44,7 +44,7 @@ public class BAccordion {
 		int vds = viewData.size();
 		
 		accordionJs = "";
-		Integer ac = new Integer("0");
+		Integer ac = Integer.valueOf("0");
 		for(BElement vw : view.getElements()) {
 			boolean isDisplay = false;
 			if((vw.getName().equals("FORM")) || (vw.getName().equals("GRID"))) isDisplay = true;
@@ -226,7 +226,11 @@ public class BAccordion {
 				
 					if(el.getAttribute("required") != null) jsColEl.put("validator", "required");
 				
-					if(fld_type.equals("TEXTFIELD")) {
+					if(el.getAttribute("edit", "true").equals("false")) {
+						// No edit allowed
+					} else if(el.getAttribute("readonly", "false").equals("true")) {
+						// The field is read only
+					} else if(fld_type.equals("TEXTFIELD")) {
 						jsColEl.put("editor", "input");
 					} else if(fld_type.equals("TEXTNUMBER")) {
 						jsColEl.put("editor", "input");

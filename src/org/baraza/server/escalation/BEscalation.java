@@ -13,6 +13,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.regex.Pattern;
 import java.text.SimpleDateFormat;
 
 import org.baraza.DB.BDB;
@@ -31,6 +32,7 @@ public class BEscalation {
 	BLogHandle logHandle;
 	String testemail;
 	String title = "";
+	String emailPattern = "";
 
 	boolean executing = false;
 	boolean runserver = true;
@@ -41,6 +43,8 @@ public class BEscalation {
 		this.root = root;
 		this.logHandle = logHandle;
 		logHandle.config(log);
+
+		emailPattern = "^(?=.{1,64}@)[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*@[^-][A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$";
 
 		// Get the main XMl configs
 		testemail = root.getAttribute("testemail");
@@ -65,6 +69,10 @@ public class BEscalation {
 		log.info("---------- Escalation Client Run : " + title);
 
 		executing = true;
+
+		// Get email limit to send at once
+		Integer sendLimit = Integer.valueOf(root.getAttribute("send_limit", "0"));
+		int sendCount = 0;
 
 		for(BElement ell : root.getElements()) {
 			String keyfield = ell.getAttribute("keyfield");
@@ -100,6 +108,11 @@ public class BEscalation {
 
 			BQuery rs = new BQuery(db, mysql);
 			while(rs.moveNext()) {
+				// Check on send limit
+				if(sendLimit > 0) {
+					if(sendCount > sendLimit) break;
+				}
+
 				Map<String, String> params = new HashMap<String, String>();
 				Map<String, String> rptParams = new HashMap<String, String>();
 				Map<String, String> headers = new HashMap<String, String>();
@@ -150,18 +163,26 @@ public class BEscalation {
 				msg += "\n</BODY>\n</HTML>\n";
 
 				for (String key : params.keySet()) {
-					log.finest(key + " : " + params.get(key));
+					log.info(key + " : " + params.get(key));
 					msg = msg.replace(key, params.get(key));
 					subject = subject.replace(key, params.get(key));
 				}
 				
-				for (String key : rptParams.keySet()) log.info(key + " : " + rptParams.get(key));
+				//for (String key : rptParams.keySet()) log.info(key + " : " + rptParams.get(key));
+
+				//System.out.println(msg);
 
 				String emailaddress = rs.getString("emailaddress");
-				log.info("To : " + emailaddress + "\nSubject : " + subject);
+				if(emailaddress != null) emailaddress = emailaddress.replace(";", ",").replace(" ", "").trim();
+				log.info("To : " + emailaddress + "\nCC : " + ccto + "\nSubject : " + subject);
 				if(testemail != null) {
 					emailaddress = testemail;
 					log.info("Test email override : " + emailaddress);
+				}
+				
+				if((emailaddress == null) && (ccto != null)) {
+					emailaddress = ccto;
+					ccto = null;
 				}
 
 				boolean gotreport = false;
@@ -170,16 +191,23 @@ public class BEscalation {
 					gotreport = rf.getReport(root.getAttribute("reportpath"), ell.getAttribute("attachment"), rs.getString(keyfield), rptParams);
 				}
 
+				boolean reportOkay = true;
 				for(String report : reports.keySet()) {
 					String reportFile = reports.get(report);
 					BReportFile rf =  new BReportFile(db, logHandle);
 					rf.setOutput(report);
-					rf.getReport(root.getAttribute("reportpath"), reportFile, rs.getString(keyfield), rptParams);
+					if(reportOkay) {
+						reportOkay = rf.getReport(root.getAttribute("reportpath"), reportFile, rs.getString(keyfield), rptParams);
+					}
 				}
 
-				if(emailaddress != null) {					
+				if((emailaddress != null) && (reportOkay) && (isEmailValid(emailaddress))) {
 					if(emailaddress.indexOf("@") > 1)
 						mail.sendMail(emailaddress, ccto, replyTo, subject, msg, gotreport, headers, reports, files);
+				} else if(!reportOkay){
+					log.severe("Report generation error");
+				} else {
+					log.severe("inValid emails");
 				}
 										
 				/* Close the problem log */
@@ -193,8 +221,12 @@ public class BEscalation {
 				}
 
 				if(functable != null) mysql += " FROM " + functable;
-				db.executeQuery(mysql);
+				if(mail.getActive()) db.executeQuery(mysql);
 				if(db.getDBType() == 2) db.executeQuery("COMMIT");
+
+				if(!mail.getActive()) break;
+
+				sendCount++;
 			}
 			rs.close();
 		}
@@ -209,6 +241,15 @@ public class BEscalation {
 
 	public boolean isExecuting() {
 		return executing;
+	}
+
+	public boolean isEmailValid(String emailAddress) {
+		boolean isValid = true;
+		String emails[] = emailAddress.split(",");
+		for(String email : emails) {
+			if(!Pattern.compile(emailPattern).matcher(email).matches()) isValid = false;
+		}
+		return isValid;
 	}
 
 	public void close() {

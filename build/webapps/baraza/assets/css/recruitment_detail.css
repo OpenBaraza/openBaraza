@@ -1,0 +1,66 @@
+@media (min-width: 992px){
+    .page-sidebar {
+        float: right;
+        margin-right: 0;
+    }
+    .page-content-wrapper .page-content {
+        margin-left: 0;
+    }
+    .page-content-wrapper {
+        width: 70%;
+        margin-top: 70px;
+    }
+    .page-sidebar.navbar-collapse {
+        width: 29%;
+        background-color: #f5f7f9;
+        position: fixed;
+        right: 0;
+    }
+    .page-container {
+        background-color: white;
+        padding-right: 0;
+        padding-top: 0;
+    }
+}
+.portlet.light.bordered {
+    border: none !important;
+}
+.portlet {
+    box-shadow: none;
+}
+.recruitment_title {
+    text-align: left;
+    padding-bottom: 10px;
+}
+.recruitment_narration {
+    font-size: 18px;
+}
+            
+.list {
+    line-height: 3rem;
+}
+.list ol {
+    list-style: none;
+    counter-reset: li;
+}
+.list li {
+    counter-increment: li;
+    margin-bottom: 15px;
+}
+.list li::before {
+    content: counter(li);
+    color: white;
+    display: inline-block;
+    width: 2.5em;
+    margin-left: -3.0em;
+    margin-right: 0.5em;
+    text-align: center;
+    direction: rtl;
+    background: #0072b8;
+    background-repeat: no-repeat;
+    background-position: center;
+    border-radius: 20px;
+}
+.list li::marker { 
+    color: transparent;
+  }

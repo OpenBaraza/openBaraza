@@ -17,14 +17,14 @@ import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.apache.catalina.realm.JDBCRealm;
+import org.apache.catalina.realm.DataSourceRealm;
 import org.apache.catalina.connector.Request;
 import org.apache.catalina.Context;
 import org.apache.tomcat.util.descriptor.web.SecurityConstraint;
 
 import org.baraza.utils.BLogHandle;
 
-public class BJDBCRealm extends JDBCRealm {
+public class BJDBCRealm extends DataSourceRealm {
 	Logger log = Logger.getLogger(BJDBCRealm.class.getName());
 	
 	private Map<String, String> userList;
@@ -48,6 +48,7 @@ public class BJDBCRealm extends JDBCRealm {
 		} else {
 			System.out.println("Could not login");
 			System.out.println("Auth : " + username + " : " + credentials);
+			errLogUser(username, "");
 		}
 		
 		return principal;
@@ -73,8 +74,8 @@ public class BJDBCRealm extends JDBCRealm {
 			Connection db = open();
 			Statement st = db.createStatement();
 			ResultSet rs = st.executeQuery(mysql);
-			db.commit();
 			if(rs.next()) loginId = rs.getString(1);
+			//db.commit();
 			rs.close();
 			st.close();
 		} catch (SQLException ex) {
@@ -90,11 +91,26 @@ public class BJDBCRealm extends JDBCRealm {
 			Connection db = open();
 			Statement st = db.createStatement();
 			st.execute(mysql);
-			db.commit();
+			//db.commit();
 			st.close();
 		} catch (SQLException ex) {
 			log.severe("Database executeAutoKey error : " + ex);
 		}
-	}	
+	}
+
+	public void errLogUser(String userName, String userIP) {
+		String loginId = null;
+		try {
+			String mysql = "SELECT err_sys_login('" + userName + "', '" + userIP + "')";
+			Connection db = open();
+			Statement st = db.createStatement();
+			st.executeQuery(mysql);
+			//db.commit();
+			st.close();
+		} catch (SQLException ex) {
+			log.severe("Database executeAutoKey error : " + ex);
+		}
+	}
+
 }
 

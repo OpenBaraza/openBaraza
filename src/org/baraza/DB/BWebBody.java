@@ -15,9 +15,9 @@ import java.sql.Clob;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
 import org.baraza.xml.BXML;
 import org.baraza.xml.BElement;
@@ -136,7 +136,7 @@ public class BWebBody extends BQuery {
 				if((view.getAttribute("edit", "true").equals("true"))) { 
 					myhtml.append("\n<th data-field='DELETE'>Delete</th>");
 					colWidths += ", \n{ field: 'DELETE', width: '75px', sortable: false, filterable: false }";
-				}	
+				}
 
 				// View addition
 				myhtml.append("\n<th data-field='VIEW'>View</th>");					
@@ -164,6 +164,7 @@ public class BWebBody extends BQuery {
 
 			String[] colspanfield = new String[colNums];
 			for(int k=0; k<colNums; k++) colspanfield[k] = "";
+			String htmlStyle = "";
 
 			while (rs.next()) {
 				if(view.getName().equals("FORMVIEW")) {
@@ -190,6 +191,10 @@ public class BWebBody extends BQuery {
 					} else if(languageId > 0) { //if the language is not english
 						fieldTitle = translations.getTitle(orgId, languageId, el.getValue(), fieldTitle);
 					}
+
+					htmlStyle = el.getAttribute("style");
+					if(htmlStyle == null) htmlStyle = "";
+					else htmlStyle = " style='" + htmlStyle + "' ";
 					
 					if(view.getName().equals("FORMVIEW") && !el.getValue().equals("")) {
 						myhtml.append("\n<tr><td>" + fieldTitle + "</td>");
@@ -203,7 +208,7 @@ public class BWebBody extends BQuery {
 					}
 					if(!el.getValue().equals(""))  {
 						String cellData = formatData(el);
-						if(el.getAttribute("raw") == null) cellData = StringEscapeUtils.escapeHtml(cellData);
+						if(el.getAttribute("raw") == null) cellData = StringEscapeUtils.escapeHtml4(cellData);
 						
 						if(sfield) dispStr += ", " + cellData;
 						if (el.getName().equals("COLFIELD")) {
@@ -222,7 +227,8 @@ public class BWebBody extends BQuery {
 
 							myhtml.append("\n<td>");
 							myhtml.append("<input type='hidden' name='actionkey' value='" + cellData + "'/>\n");
-							myhtml.append("<button type='submit' name='actionprocess' value='" + cellData + "' class='i_cog icon small'/>\n");
+							myhtml.append("<button type='submit' name='actionprocess' value='" + cellData
+								+ "' class='i_cog icon action_button small'/>\n");
 							myhtml.append(myAction + "</button>");
 						} else if(el.getName().equals("SEARCH")) {
 							String js = el.getAttribute("js", "updateForm");
@@ -245,11 +251,11 @@ public class BWebBody extends BQuery {
 						} else if(el.getName().equals("COMBOBOX")) {
 							String fieldValue = getString(el.getValue());
 							String defaultValue = el.getAttribute("default", "");
-							String linkData = rs.getString(keyField);
-							String jsFunction = " onchange=\"readComboValue('" + el.getValue() + "','" + linkData + "', this);\" ";
-							if(el.getAttribute("linksource") != null) linkData = rs.getString(el.getAttribute("linksource"));
+							String keyData = rs.getString(keyField);
+							String jsFunction = " onchange=\"readComboValue('" + el.getValue() + "','" + keyData + "', this);\" ";
+							if(el.getAttribute("linksource") != null) keyData = rs.getString(el.getAttribute("linksource"));
 							myhtml.append("\n<td>");
-							myhtml.append(getComboBox(el, linkData, true, fieldValue, defaultValue, jsFunction));
+							myhtml.append(getComboBox(el, keyData, true, fieldValue, defaultValue, jsFunction));
 						} else if(el.getName().equals("BROWSER")) {
 							myhtml.append("\n<td>");
 							if(el.getAttribute("path") != null) myhtml.append("<a href='" + el.getAttribute("path"));
@@ -298,7 +304,7 @@ public class BWebBody extends BQuery {
 							myhtml.append(">" + cellData + "</a>");
 						} else if(el.getAttribute("display", "show").equals("hide")){
 						} else {
-							myhtml.append("\n<td>");
+							myhtml.append("\n<td" + htmlStyle + ">");
 							myhtml.append(cellData);
 						}
 						
@@ -448,7 +454,7 @@ public class BWebBody extends BQuery {
 		
 		boolean noSpan = true;
 		boolean tabNotDone = true;
-		Integer formCols = new Integer(view.getAttribute("cols", "1"));
+		Integer formCols = Integer.valueOf(view.getAttribute("cols", "1"));
 		tab = "";
      	for(BElement el : view.getElements()) {
 			if(el.getAttribute("tab") != null) {
@@ -498,7 +504,7 @@ public class BWebBody extends BQuery {
 		String classField = view.getAttribute("class.field", "col-md-9");
 		
 		//if(el.getAttribute("tab") != null) formCols = 0;
-		Integer w = new Integer(el.getAttribute("w", "150"));
+		Integer w = Integer.valueOf(el.getAttribute("w", "150"));
 		if((formCols > 1) && (w < 400)) response.append("  <div class='" + classForm + "'>\n");
 		
 		response.append("	<div class='form-group'>\n");
@@ -585,7 +591,8 @@ public class BWebBody extends BQuery {
 			else fieldValue = defaultValue;
 
 			response.append("<textarea class='ckeditor form-control' name='" + el.getValue() + "'");
-			if(el.getAttribute("id") != null) response.append(" id='" + el.getAttribute("id") + "'");
+			if(el.getAttribute("id") == null) response.append(" id='" + el.getValue() + "'");
+			else response.append(" id='" + el.getAttribute("id") + "'");
 			if(el.getAttribute("placeholder") != null) response.append(" placeholder='" + el.getAttribute("placeholder") + "'");
 			if(el.getAttribute("enabled","true").equals("false")) response.append(" disabled='true'");
 			response.append(" cols='" + el.getAttribute("cols", "50"));
@@ -894,6 +901,15 @@ public class BWebBody extends BQuery {
 			if(cmbWhereSql == null) cmbWhereSql = userFilter;
 			else cmbWhereSql += " AND " + userFilter;
 		}
+		
+		if((el.getAttribute("user_fnct") != null) && (el.getAttribute("user_field") != null)) {
+			String userFnct = "SELECT " + el.getAttribute("user_fnct") + "('" + db.getUserID() + "')";
+			userFnct = db.executeFunction(userFnct);
+			userFnct = "(" + el.getAttribute("user_field") + " = '" + userFnct + "')";
+
+			if(cmbWhereSql == null) cmbWhereSql = userFnct;
+			else cmbWhereSql += " AND " + userFnct;
+		}
 
 		String tableFilter = null;
 		String linkField = el.getAttribute("linkfield");
@@ -905,7 +921,7 @@ public class BWebBody extends BQuery {
 			else cmbWhereSql += " AND (" + tableFilter + ")";
 		}
 
-		if(cmbWhereSql != null) mysql += " WHERE " + cmbWhereSql;
+		if(cmbWhereSql != null) mysql += "\n WHERE " + cmbWhereSql;
 
 		String orderBySql = el.getAttribute("orderby");
 		if(orderBySql == null) mysql += " ORDER BY " + lpfield;
@@ -914,7 +930,8 @@ public class BWebBody extends BQuery {
 //System.out.println("BASE COMBO : " + mysql);
 
 		if(selectNone != null && !eof) response.append("<option disabled selected value>Select</option>");
-		if(nodefault != null && !eof) response.append("<option></option>");
+		if(nodefault != null && !eof) { response.append("<option></option>"); }
+		else if(nodefault != null && fieldValue == null) { response.append("<option></option>"); }
 		if(defaultSelect != null) {
 			if(!eof)  response.append("<option>" + defaultSelect + "</option>");
 			if(eof && fieldValue == null) response.append("<option>" + defaultSelect + "</option>");

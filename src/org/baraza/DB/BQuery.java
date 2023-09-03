@@ -8,40 +8,42 @@
  */
 package org.baraza.DB;
 
-import java.util.logging.Logger;
-import java.math.BigDecimal;
+import java.lang.NumberFormatException;
 import java.lang.StringBuffer;
+import java.math.BigDecimal;
+
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.text.DecimalFormat;
-import java.util.List;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Vector;
-import java.lang.NumberFormatException;
-import java.sql.Statement;
+import java.util.logging.Logger;
+
+import java.sql.Clob;
+import java.sql.Date;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
-import java.sql.PreparedStatement;
-import java.sql.Clob;
-import java.sql.Types;
-import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.sql.SQLException;
+import java.sql.Types;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 
-import org.json.JSONObject;
 import org.json.JSONArray;
+import org.json.JSONObject;
 
-import org.baraza.xml.BElement;
-import org.baraza.utils.BDateFormat;
 import org.baraza.utils.BCipher;
+import org.baraza.utils.BDateFormat;
+import org.baraza.utils.BLogHandle;
 import org.baraza.utils.BTextFormat;
 import org.baraza.utils.Bio;
-import org.baraza.utils.BLogHandle;
+import org.baraza.xml.BElement;
 
 public class BQuery {
 	Logger log = Logger.getLogger(BQuery.class.getName());
@@ -75,7 +77,7 @@ public class BQuery {
 	boolean firstFetch = true;
 	boolean noaudit = false;
 	boolean readonly = false;
-	boolean iforg = false;
+	boolean ifOrg = false;
 	int errCode = 0;
 	String changeTrack = "";
 	
@@ -209,9 +211,11 @@ public class BQuery {
 			if(!colName.equals("")) {
 				if(!fieldNames.contains(colName)) {
 					String function = el.getAttribute("fnct");
+					String userFnct = el.getAttribute("user_fnct");
 					if(el.getName().equals("ACTION")) function = null;
 					if(!colNames.equals("")) colNames += ", ";
 					if(function != null) colNames += "(" + function + ") as " + colName;
+					else if(userFnct != null) colNames += userFnct + "," + user.getUserID() + ") as " + colName;
 					else colNames += colName;
 
 					fieldNames.add(colName);
@@ -222,6 +226,19 @@ public class BQuery {
 
 					if(el.getAttribute("edit", "false").equals("true")) columnEdit.add(true);
 					else columnEdit.add(false);
+				}
+			}
+
+			// Add fields for excel export
+			if(el.getName().equals("TITLES")) {
+				for(BElement elt : el.getElements()) {
+					colName = elt.getValue();
+					String tFnct = elt.getAttribute("fnct");
+					if(!colNames.equals("")) colNames += ", ";
+					if(tFnct != null) colNames += "(" + tFnct + ") as " + colName;
+					else colNames += colName;
+
+					fieldNames.add(colName);
 				}
 			}
 		}
@@ -263,8 +280,8 @@ public class BQuery {
 			if(view.getAttribute("orgid") != null) orgID = view.getAttribute("orgid");
 			if(view.getAttribute("noorg.query") == null) colNames = addField(colNames, orgID);
 		}
-		if(view.getAttribute("noorg") == null) iforg = true;
-		else iforg = false;
+		if(view.getAttribute("noorg") == null) ifOrg = true;
+		else ifOrg = false;
 
 		if(auditID != null) {
 			if(view.getName().equals("FORM")) {
@@ -360,7 +377,7 @@ public class BQuery {
 		mysql = tableSelect;
 
 		// where sql
-		if(wheresql != null) wheresql = "\nWHERE " + wheresql;
+		if(wheresql != null) wheresql = "\nWHERE (" + wheresql + ") ";
 		if(view != null) {
 			if(view.getAttribute("where") != null) {
 				if(wheresql == null) wheresql = "\nWHERE " + view.getAttribute("where");
@@ -446,7 +463,7 @@ public class BQuery {
 		}*/
 
 		// SQL view debug point
-//System.out.println("SQL : " + mysql);
+		//log.info("SQL : " + mysql);
 	}
 
 	public void setSQL(String lsql) {
@@ -631,7 +648,7 @@ public class BQuery {
 	}
 
 	public Float getFloat(String fieldName) {
-		Float ans = new Float("0.0");
+		Float ans = 0.0f;
 
 		try {
 			ans = rs.getFloat(fieldName);
@@ -643,7 +660,7 @@ public class BQuery {
 	}
 
 	public Double getDouble(String fieldName) {
-		Double ans = new Double("0.0");
+		Double ans = 0.0d;
 
 		try {
 			ans = rs.getDouble(fieldName);
@@ -671,6 +688,18 @@ public class BQuery {
 
 		try {
 			ans = rs.getTime(fieldName);
+		} catch (SQLException ex) {
+			log.severe("Data field read error : " + ex);
+		}
+
+		return ans;
+	}
+	
+	public Timestamp getTimestamp(String fieldName) {
+		Timestamp ans = null;
+
+		try {
+			ans = rs.getTimestamp(fieldName);
 		} catch (SQLException ex) {
 			log.severe("Data field read error : " + ex);
 		}
@@ -911,7 +940,7 @@ public class BQuery {
 				}
 			} else if(isEdit) {
 				if(db.isFullAudit(tableName) || (auditID != null)) {
-					String autoKeyID = db.insAudit(tableName, getString(keyField), "PREPARE");
+					String autoKeyID = db.insAudit(tableName, getString(keyField), "PREPARE", user);
 					if(auditID != null) rs.updateInt(auditID,  Integer.valueOf(autoKeyID));
 					if(db.isFullAudit(tableName)) {
 						changeTrack += "}";
@@ -951,11 +980,11 @@ public class BQuery {
 		String fvalue = "";
 
 		if(auditID != null) {
-			String autoKeyID = db.insAudit(tableName, "NEW", "PREPARE");
+			String autoKeyID = db.insAudit(tableName, "NEW", "PREPARE", user);
 			addNewBlock.put(auditID, autoKeyID);
 		}
 
-		if((iforg) && (orgID != null)) {
+		if((ifOrg) && (orgID != null)) {
 			if(!addNewBlock.containsKey(orgID)) {
 				if(userOrg != null) addNewBlock.put(orgID, userOrg);
 				else addNewBlock.put(orgID, "0");
@@ -1096,7 +1125,7 @@ public class BQuery {
 			String dataValue = null;
 			if((dataValues != null) && (dataValues.length > 0)) dataValue = dataValues[0];
 
-			// System.out.println("BASE 1040 : " + el.getValue() + " : " + dataValue);
+//System.out.println("BASE 1040 : " + el.getValue() + " : " + dataValue);
 			if(dataValue != null) {
 				if(dataValue.trim().equals("")) dataValue = null;
 			}
@@ -1112,12 +1141,14 @@ public class BQuery {
 				}
 			} else if(el.getName().equals("USERFIELD")) {
 				saveMsg += updateField(el.getValue(), user.getUserID());
+				System.out.println("BASE 1044 : " + user.getUserID());
 			} else if(el.getName().equals("USERNAME")) {
 				saveMsg += updateField(el.getValue(), user.getUserName());
 			} else if(el.getName().equals("REMOTEIP")) {
 				saveMsg += updateField(el.getValue(), remoteAddr);
 			} else if(el.getName().equals("DEFAULT")) {
 				String defaultVal = db.getDefaultValue(el, user);
+				System.out.println("BASE 1042 : " + defaultVal);
 				saveMsg += updateField(el.getValue(), defaultVal);
 			} else if(el.getName().equals("FUNCTION")) {
 				if(el.getAttribute("when", "").equals("new")) {
@@ -1163,8 +1194,10 @@ public class BQuery {
 				String dbdate = BDateFormat.parseTime(dataValue, el.getAttribute("type", "1"));
 				if(dbdate != null) saveMsg += updateField(el.getValue(), dbdate);
 				else saveMsg += "Time format error for : " + el.getValue() + "<br>\n";
+			} else if(el.getAttribute("raw", "false").equals("true")) {
+				saveMsg += updateField(el.getValue(), dataValue);
 			} else if(dataValue != null) {
-				dataValue = StringEscapeUtils.unescapeHtml(dataValue);
+				dataValue = StringEscapeUtils.unescapeHtml4(dataValue);
 				if(el.getAttribute("format", "").equals("nohtml")) {
 					dataValue = "<p>" + dataValue.replace("\n", "<br>\n") + "</p>"; 
 				}
@@ -1647,7 +1680,7 @@ public class BQuery {
 
 		// Update database
 		if(updateTable != null) {
-			String autoKeyID = db.insAudit(tableName, keyFieldData.get(aRow), "EDIT");
+			String autoKeyID = db.insAudit(tableName, keyFieldData.get(aRow), "EDIT", user);
 
 			String sql = "UPDATE " + updateTable + " SET " + fieldNames.get(aCol);
 			if(value == null) sql += " = null";
@@ -1998,13 +2031,9 @@ public class BQuery {
 				String mydate = dateformatter.format(rs.getTimestamp(el.getValue()));				
 				response = mydate;
 			} else if(format.equals("double")) {
-				if(pattern == null) {
-					NumberFormat numberFormatter = NumberFormat.getNumberInstance();
-					response = numberFormatter.format(rs.getDouble(el.getValue()));
-				} else {
-					DecimalFormat myFormatter = new DecimalFormat(pattern);
-					response = myFormatter.format(rs.getDouble(el.getValue()));
-				}
+				if(pattern == null) pattern = "###,###,###,###,###,###.#";
+				DecimalFormat myFormatter = new DecimalFormat(pattern);
+				response = myFormatter.format(rs.getDouble(el.getValue()));
 			} else if(format.equals("nohtml")) {
 				response = rs.getString(el.getValue());
 				response = BTextFormat.htmlToText(response);
@@ -2016,7 +2045,7 @@ public class BQuery {
 			log.severe("Query data field formating error : " + el.getName() + " : " + el.getValue() + " : " + ex);
 		}
 
-		return response;
+		return response.trim();
 	}
 	
 	public void savecvs(String fileName) {
@@ -2036,26 +2065,26 @@ public class BQuery {
 			if(view.getAttribute("notitle","false").equals("true")) isTitle = false;
 		}
 
-		String mystr = "";
+		StringBuilder mystr = new StringBuilder();
 		if(isTitle) {
 			boolean firstItem = true;
 			for(String title : titles) {
-				if(firstItem) mystr += "\"" + title + "\"";
-				else mystr += ",\"" + title + "\"";
+				if(firstItem) mystr.append("\"" + title + "\"");
+				else mystr.append(",\"" + title + "\"");
 				firstItem = false;
 			}
-			mystr += "\r\n";
+			mystr.append("\r\n");
 		}
 
 		int colcount = getColumnCount()-1;
     	for(i=0; i<getRowCount(); i++) {
 			for(j=0;j<=colcount;j++) {
-				if(j==colcount) mystr += getCsvValueAt(i, j) + "\r\n";
-				else mystr += getCsvValueAt(i, j) + ",";
+				if(j==colcount) mystr.append(getCsvValueAt(i, j) + "\r\n");
+				else mystr.append(getCsvValueAt(i, j) + ",");
 			}
 		}
 
-		return mystr;
+		return mystr.toString();
 	}
 	
 	public String getFormCsv() {
@@ -2098,6 +2127,46 @@ public class BQuery {
 
 		return mystr;
     }
+
+	public String getRecord() {
+		int i, j;
+
+		boolean isTitle = true;
+		String mystr = "";
+		String spacePad = "                                                                           ";
+
+		if(view == null) return mystr;
+
+		if(view.getAttribute("notitle", "false").equals("true")) isTitle = false;
+
+		if(isTitle) {
+			for(BElement el : view.getElements()) {
+				String title = el.getAttribute("title") + spacePad;
+				String w = el.getAttribute("w");
+				int wd = Integer.valueOf(w);
+
+				mystr += title.substring(0, wd);
+			}
+			mystr += "\r\n";
+		}
+
+		beforeFirst();
+		while(moveNext()) {
+			for(BElement el : view.getElements()) {
+				String elValue = getString(el.getValue());
+				if(elValue == null) elValue = spacePad;
+				else elValue += spacePad;
+
+				String w = el.getAttribute("w");
+				int wd = Integer.valueOf(w);
+
+				mystr += elValue.substring(0, wd);
+			}
+			mystr += "\r\n";
+		}
+
+		return mystr;
+	}
 
 	public String getTableXml(String ifNull) {
 		BElement tableXml = new BElement(view.getAttribute("name"));

@@ -25,19 +25,18 @@ import java.text.ParseException;
 import java.sql.Connection;
 import org.w3c.dom.Document;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.Part;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
 
 import org.json.JSONObject;
 import org.json.JSONArray;
 
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.io.IOUtils;
 
 import org.baraza.com.BLicense;
 import org.baraza.utils.Bio;
@@ -449,6 +448,7 @@ public class BWeb {
 		}
 
 		//Debug for (String param : params.keySet()) System.out.println(param + " : " + params.get(param));
+		
 	}
 
 	public void getParams(BElement elParam, String paramKey) {
@@ -486,9 +486,10 @@ public class BWeb {
 			String elName = el.getName();
 			if(Arrays.binarySearch(deskTypes, elName)>=0) {
 				// Show only a form for a new entry
+				
 				boolean show = true;
-				if(keyD.equals("!new!") && (!elName.equals("FORM"))) show = false;
-				if(keyD.equals("!new!") && (el.getAttribute("new", "true").equals("false"))) show = false;
+				if("!new!".equals(keyD) && (!elName.equals("FORM"))) show = false;
+				if("!new!".equals(keyD) && (el.getAttribute("new", "true").equals("false"))) show = false;
 				
 				if(el.getAttribute("superuser", "false").equals("true")) {
 					if(!db.getUser().getSuperUser()) show = false;
@@ -520,6 +521,24 @@ public class BWeb {
 							else tcWhere += " AND ";
 							tcWhere += el.getAttribute("user") + " = " + db.getUserID();
 						}
+						if(el.getAttribute("filter.departments") != null) {
+							if(db.getUser().getEntityDepartments() != null) {
+								String fdWhere = el.getAttribute("filter.departments")
+									+ " IN (" + db.getUser().getEntityDepartments() + ")";
+
+								if(tcWhere == null) tcWhere = "\nWHERE " + fdWhere;
+								else tcWhere += " AND " + fdWhere;
+							}
+						}
+						if(el.getAttribute("filter.deployments") != null) {
+							if(db.getUser().getEntityDeployments() != null) {
+								String fdWhere = el.getAttribute("filter.deployments")
+									+ " IN (" + db.getUser().getEntityDeployments() + ")";
+
+								if(tcWhere == null) tcWhere = "\nWHERE " + fdWhere;
+								else tcWhere += " AND " + fdWhere;
+							}
+						}
 						if(el.getAttribute("linkfield") != null) {
 							if(tcWhere == null) tcWhere = " WHERE ";
 							else tcWhere += " AND ";
@@ -541,7 +560,7 @@ public class BWeb {
 					else
 						tabs += "\t\t\t<li>";
 					tabs += "<a href='?view=" + keyV +  j.toString();
-					if(keyD.equals("!new!") && (elName.equals("FORM"))) {
+					if("!new!".equals(keyD) && (elName.equals("FORM"))) {
 						tabs += "&data=" + keyD + "'>New " + tabName + "</a></li>\n";
 					} else if (elName.equals("FORM") && (!el.getAttribute("edit", "true").equals("false"))) {
 						if(el.getAttribute("title") == null) tabs += "&data=" + keyD + "'>Edit " + tabName + "</a></li>\n";
@@ -624,26 +643,34 @@ public class BWeb {
 			
 			if(hasForm && newShow) {
 				String newBtn = view.getAttribute("new.button", "New");
-				buttons += "<a class='btn blue btn-sm' title='Add New' href='?view=" + viewKey + ":" + String.valueOf(fv) + "&data=!new!'><i class='fa fa-plus'></i>   " + newBtn + "</a>\n";
+				buttons += "<a class='btn blue btn-sm' title='Add New' href='?view="
+					+ viewKey + ":" + String.valueOf(fv) + "&data=!new!'><i class='fa fa-plus'></i>   "
+					+ newBtn + "</a>\n";
 			}
-			buttons += "<a class='btn green btn-sm' href='?view=" + viewKey + did + "&refresh=true'><i class='fa fa-refresh'></i> Refresh</a>\n";
+
+			buttons += "<a class='btn green btn-sm' href='?view="
+				+ viewKey + did + "&refresh=true'><i class='fa fa-refresh'></i> Refresh</a>\n";
 			
-			if(view.getAttribute("grid.ajaxsearch", "true").equals("true")) {
-			 	buttons += "<a id = 'btn_search_filter' class='btn green btn-sm'><i class='fa fa-search'></i>   Search</a>\n";
-			 	buttons += "<input id='myInput' type='text' placeholder='Type to Search' aria-label='Search'>\n";
-			 }
+			// if(view.getAttribute("grid.ajaxsearch", "true").equals("true")) {
+			//  	buttons += "<a id = 'btn_search_filter' class='btn green btn-sm'><i class='fa fa-search'></i>   Search</a>\n";
+			//  	buttons += "<input id='myInput' type='text' placeholder='Type to Search' aria-label='Search'>\n";
+			//  }
 				
 			if(view.getAttribute("grid.export", "true").equals("true"))
-				buttons += "<a class='btn green btn-sm' target='_blank' href='grid_export?view=" + viewKey + did + "&action=export'><i class='fa fa-file-csv'></i> Export</a>\n";
+				buttons += "<a class='btn green btn-sm' target='_blank' href='grid_export?view="
+					+ viewKey + did + "&action=export'><i class='fa fa-file-csv'></i> Export</a>\n";
 				
 			if(view.getAttribute("excel.export", "true").equals("true"))
-				buttons += "<a class='btn green btn-sm' target='_blank' href='grid_export?view=" + viewKey + did + "&action=excel_export'><i class='fa fa-file-excel-o'></i> Excel</a>\n";
+				buttons += "<a class='btn green btn-sm' target='_blank' href='grid_export?view="
+					+ viewKey + did + "&action=excel_export'><i class='fa fa-file-excel-o'></i> Excel</a>\n";
 				
 			if(view.getAttribute("pdf.export", "true").equals("true"))
-				buttons += "<a class='btn green btn-sm' target='_blank' href='pdf_export?view=" + viewKey + did + "&action=pdf_export'><i class='fa fa-file-pdf-o'></i> Pdf</a>\n";
+				buttons += "<a class='btn green btn-sm' target='_blank' href='pdf_export?view="
+					+ viewKey + did + "&action=pdf_export'><i class='fa fa-file-pdf-o'></i> Pdf</a>\n";
 			
 			if(view.getAttribute("grid.print", "false").equals("true"))
-				buttons += "<a class='btn green btn-sm' target='_blank' href='b_print.jsp?view=" + viewKey + did + "&action=print'><i class='fa fa-print'></i> Print</a>\n";
+				buttons += "<a class='btn green btn-sm' target='_blank' href='b_print.jsp?view="
+					+ viewKey + did + "&action=print'><i class='fa fa-print'></i> Print</a>\n";
 				
 			if(view.getAttribute("import") != null)
 				buttons += "<button class='btn btn-sm green' type='button' id='btnClear' name='btnClear' value='clear'> <i class='fa fa-eraser'></i> &nbsp; Clear </button>\n";
@@ -657,17 +684,21 @@ public class BWeb {
 			if(dataItem != null) did = "&data=" + dataItem;
 			
 			if(view.getAttribute("grid.export", "true").equals("true"))
-				buttons += "<a class='btn green btn-sm' target='_blank' href='grid_export?view=" + viewKey + did + "&action=export'><i class='fa fa-file-excel-o'></i> Export</a>\n";
+				buttons += "<a class='btn green btn-sm' target='_blank' href='grid_export?view="
+					+ viewKey + did + "&action=export'><i class='fa fa-file-excel-o'></i> Export</a>\n";
 		
 			if(view.getAttribute("excel.export", "true").equals("true"))
-				buttons += "<a class='btn green btn-sm' target='_blank' href='grid_export?view=" + viewKey + did + "&action=excel_export'><i class='fa fa-file-excel-o'></i> Excel</a>\n";
+				buttons += "<a class='btn green btn-sm' target='_blank' href='grid_export?view="
+					+ viewKey + did + "&action=excel_export'><i class='fa fa-file-excel-o'></i> Excel</a>\n";
 		}
 		
 		if(view.getName().equals("ACCORDION")) {
 			if(view.getAttribute("new", "true").equals("true") && ("!new!".equals(dataItem)))
-				buttons += "<button class='btn btn-success i_tick icon small' name='process' value='Update'> <i class='fa  fa-save'></i> &nbsp; Save </button>\n";
+				buttons += "<button class='btn btn-success i_tick icon small' name='process' id='btnFormProcess' "
+					+ "value='Update'> <i class='fa  fa-save'></i> &nbsp; Save </button>\n";
 			if(view.getAttribute("edit", "true").equals("true") && (!"!new!".equals(dataItem)))
-				buttons += "<button class='btn btn-success i_tick icon small' name='process' value='Update'> <i class='fa  fa-save'></i> &nbsp; Save </button>\n";
+				buttons += "<button class='btn btn-success i_tick icon small' name='process' id='btnFormProcess' "
+					+ "value='Update'> <i class='fa  fa-save'></i> &nbsp; Save </button>\n";
 			
 			boolean canDel = true;
 			if(view.getAttribute("delete", "true").equals("false")) canDel = false;
@@ -676,7 +707,8 @@ public class BWeb {
 				if(!checkAccess(view.getAttribute("delete.role"), view.getAttribute("access"))) canDel = false;
 			}
 			if(canDel) {
-				buttons += "<button class='btn btn-danger i_cross icon small' name='process' value='Delete' "
+				buttons += "<button class='btn btn-danger i_cross icon small' name='process' "
+				+ "id='btnFormDelete' value='Delete' "
 				+ "onclick=\"return confirm('Are you sure you delete?')\""
 				+ "> <i class='fa fa-trash-o'></i> &nbsp; Delete</button>\n";
 			}
@@ -684,13 +716,20 @@ public class BWeb {
 			// Add a button to launch a search object
 			BElement elSearch = view.getElementByName("SEARCH");
 			if((elSearch != null) && (!"!new!".equals(dataItem))) {
-				buttons += "<button class='btn btn-sm green' type='button' id='btnSearch' name='btnSearch' value='Update'> <i class='fa fa-search'></i> &nbsp;"
+				buttons += "<button class='btn btn-sm green' type='button' id='btnSearch' name='btnSearch' "
+					+ "value='Update'> <i class='fa fa-search'></i> &nbsp;"
 					+ elSearch.getAttribute("name") + " </button>\n";
 			}
 		}
 		
 		if(view.getName().equals("TABLEVIEW") && (view.getAttribute("updatetable") != null)) {
-			buttons += "<button type='button' class='btn btn-success i_tick icon small' name='btProcess' id='btProcess' value='Submit'><i class='fa  fa-save'></i> &nbsp; Submit</button>\n";
+			buttons += "<button type='button' class='btn btn-success i_tick icon small' "
+				+ "name='btProcess' id='btProcess' value='Submit'><i class='fa  fa-save'></i> &nbsp; Submit</button>\n";
+		}
+		
+		if(view.getName().equals("DIARY")) {
+			buttons += "<a class='btn btn-circle btn-icon-only btn-default btn-sm fullscreen' href='javascript:;' "
+				+ "data-original-title='' title=''></a>";
 		}
 		
 		if(isForm()) {
@@ -709,18 +748,22 @@ public class BWeb {
 		if(view.getName().equals("FORM")) {		
 			String saveBtn = view.getAttribute("save.button", "Save");
 			if(view.getAttribute("new", "true").equals("true") && ("!new!".equals(dataItem)))
-				buttons += "<button class='btn btn-success i_tick icon small' name='process' value='Update'> <i class='fa  fa-save'></i> &nbsp; " + saveBtn + "</button>\n";
+				buttons += "<button class='btn btn-success i_tick icon small' name='process' id='btnFormProcess' "
+					+ "value='Update'> <i class='fa  fa-save'></i> &nbsp; " + saveBtn + "</button>\n";
 			if(view.getAttribute("fornew", "false").equals("true"))
-				buttons += "<button class='btn btn-success i_tick icon small' name='process' value='Update'> <i class='fa  fa-save'></i> &nbsp; " + saveBtn + "</button>\n";
+				buttons += "<button class='btn btn-success i_tick icon small' name='process' id='btnFormProcess' "
+					+ "value='Update'> <i class='fa  fa-save'></i> &nbsp; " + saveBtn + "</button>\n";
 			if(view.getAttribute("edit", "true").equals("true") && (!"!new!".equals(dataItem)))
-				buttons += "<button class='btn btn-success i_tick icon small' name='process' value='Update'> <i class='fa  fa-save'></i> &nbsp; " + saveBtn + "</button>\n";
+				buttons += "<button class='btn btn-success i_tick icon small' name='process' id='btnFormProcess' "
+					+ "value='Update'><i class='fa  fa-save'></i> &nbsp; " + saveBtn + "</button>\n";
 			boolean canDel = true;
 			if(view.getAttribute("delete", "true").equals("false")) canDel = false;
 			if(canDel && view.getAttribute("delete.role") != null) {
 				if(!checkAccess(view.getAttribute("delete.role"), view.getAttribute("access"))) canDel = false;
 			}
 			if(canDel && (!"!new!".equals(dataItem)))
-				buttons += "<button class='btn btn-danger i_cross icon small' name='process' value='Delete' "
+				buttons += "<button class='btn btn-danger i_cross icon small' name='process' "
+				+ "id='btnFormDelete' value='Delete' "
 				+ "onclick=\"return confirm('Are you sure you delete?')\""
 				+ "> <i class='fa fa-trash-o'></i> &nbsp; Delete</button>\n";
 			/*if(view.getAttribute("audit", "true").equals("true") && (!"!new!".equals(dataItem)))
@@ -915,7 +958,7 @@ public class BWeb {
 			String wDataItem = "";
 			if(dataItem != null) wDataItem = dataItem;
 			
-			if(filterKSN.equals(wDataItem)) wheresql = (String)webSession.getAttribute(filterSN);
+			if(filterKSN.equals(wDataItem)) wheresql = "(" + (String)webSession.getAttribute(filterSN) + ")";
 			else webSession.removeAttribute(filterSN);
 			
 			System.out.println("Filter Where :" + filterSN + ": " + wheresql);
@@ -926,7 +969,17 @@ public class BWeb {
 			linkData = viewData.get(vds - 1);
 			formLinkData = viewData.get(vds - 2);
 			
-			if((!linkData.equals("!new!")) && (comboField == null)) {
+			if(linkData == null) {
+				if(view.getName().equals("FORM")) {
+					if(wheresql != null) wheresql += " AND (";
+					else wheresql = "(";
+					wheresql += view.getAttribute("keyfield") + " is null)";
+				} else if(view.getAttribute("linkfield") != null) {
+					if(wheresql != null) wheresql += " AND (";
+					else wheresql = "(";
+					wheresql += view.getAttribute("linkfield") + " is null)";
+				}
+			} else if ((!linkData.equals("!new!")) && (comboField == null)) {
 				if(view.getName().equals("FORM")) {
 					if(wheresql != null) wheresql += " AND (";
 					else wheresql = "(";
@@ -936,7 +989,7 @@ public class BWeb {
 					else wheresql = "(";
 					wheresql += view.getAttribute("linkfield") + " = '" + linkData + "')";
 				}
-			}
+			} 
 
 			// Table linking on parameters
 			String paramLinkData = linkData;
@@ -1419,238 +1472,16 @@ System.out.println("Action key" + actionKey);
 		
 		return sqlErr;
 	}
-	
-	public void updateMultiPart(HttpServletRequest request, ServletContext config, String tmpPath) {
-		if(!ServletFileUpload.isMultipartContent(request)) {
-			updateForm(request);
-			return;
-		}
-		
-		int yourMaxMemorySize = 262144;
-		File yourTempDirectory = new File(tmpPath);
-		DiskFileItemFactory factory = new DiskFileItemFactory(yourMaxMemorySize, yourTempDirectory);
-		ServletFileUpload upload = new ServletFileUpload(factory);
-		
-		Map<String, String> reqParams = new HashMap<String, String>();
-		try {
-			List items = upload.parseRequest(request);
-			Iterator itr = items.iterator();
-			while(itr.hasNext()) {
-				FileItem item = (FileItem) itr.next();
-				if(item.isFormField()) {
-					reqParams.put(item.getFieldName(), item.getString());
-				} else if(item.getSize() > 0) {
-					String pictureFile = savePicture(item, config);
-					if(pictureFile != null) reqParams.put(item.getFieldName(), pictureFile);
-				}
-			}
-			
-			updateForm(request, reqParams);
-		} catch (FileUploadException ex) {
-			System.out.println("File upload exception " + ex);
-		}
-	}
-	
-	public String savePicture(FileItem item, ServletContext config) {
-		String pictureFile = null;
 
-		String repository = config.getInitParameter("repository_url");
-		String username = config.getInitParameter("rep_username");
-		String password = config.getInitParameter("rep_password");
-System.out.println("repository : " + repository);
-		BWebdav webdav = new BWebdav(repository, username, password);
-		
-		String contentType = item.getContentType();
-		String fieldName = item.getFieldName();
-		String fileName = item.getName();
-		long fs = item.getSize();
-
-		long maxfs = 4194304;
-		if(view != null) {
-			BElement el = view.getElement(fieldName);
-			if(el != null) maxfs = (Long.valueOf(el.getAttribute("maxfilesize", "4194304"))).longValue();
-		}
-
-		String ext = null;
-		int i = fileName.lastIndexOf('.');
-		if(i>0 && i<fileName.length()-1) ext = fileName.substring(i+1).toLowerCase();
-		if(ext == null) ext = "NAI";
-		String pictureName = db.executeFunction("SELECT nextval('picture_id_seq')") + "pic." + ext;
-
-		try {
-			String[] imageTypes = {"BMP", "GIF", "JFIF", "JPEG", "JPG", "PNG", "TIF", "TIFF"};
-			ext = ext.toUpperCase().trim();
-
-			if(Arrays.binarySearch(imageTypes, ext) >= 0) {
-				if(fs < maxfs) {
-					webdav.saveFile(item.getInputStream(), pictureName);
-					pictureFile = pictureName;
-				}
-			}
-		}  catch(IOException ex) {
-			log.severe("File saving failed Exception " + ex);
-		}
-
-		return pictureFile;
-	}
-	
-	public void updateForm(HttpServletRequest request) {
-		Map<String, String[]> reqParams = new HashMap<String, String[]>();
-		Enumeration e = request.getParameterNames();
-
-        while (e.hasMoreElements()) {
-			String elName = (String)e.nextElement();
-			reqParams.put(elName, request.getParameterValues(elName));
-		}
-		updateFormData(request, reqParams);
-	}
-	
-	public void updateForm(HttpServletRequest request, Map<String, String> reqParams) {
-		Map<String, String[]> newParams = new HashMap<String, String[]>();
-		for(String paramName : reqParams.keySet()) {
-			String[] pArray = new String[1];
-			pArray[0] = reqParams.get(paramName);
-			newParams.put(paramName, pArray);
-		}
-		updateFormData(request, newParams);
-	}
-
-	public void updateFormData(HttpServletRequest request, Map<String, String[]> reqParams) {
-		String linkData = null;
-		String formlink = null;
-		int vds = viewKeys.size();
-		saveMsg = "";
-
-		if(vds > 2) {
-			linkData = viewData.get(vds - 1);
-			if(linkData.equals("!new!")) formlink = view.getAttribute("keyfield") + " = null";
-			else formlink = view.getAttribute("keyfield") + " = '" + linkData + "'";
-		}
-
-		if(view.getName().equals("FORM")) {
-			BQuery qForm = new BQuery(db, view, formlink, null);
-			if(view.getAttribute("foredit") != null) {
-				qForm.movePos(1);
-				qForm.recEdit();
-			} else if(vds < 3) {
-				qForm.recAdd();
-			} else if(linkData.equals("!new!")) {
-				qForm.recAdd();
-				if(view.getAttribute("linkfield") != null) 
-					qForm.updateField(view.getAttribute("linkfield"), viewData.get(vds - 2));
-			} else {
-				qForm.movePos(1);
-				qForm.recEdit();
-			}
-
-			Map<String, String> inputParams = new HashMap<String, String>();
-			if(view.getAttribute("inputparams") != null) {
-				String paramArr[] = view.getAttribute("inputparams").toLowerCase().split(",");
-				for(String param : paramArr) {
-					String pItems[] = param.split("=");
-					if(pItems.length == 2) {
-						qForm.updateField(pItems[0].trim(), params.get(pItems[1].trim()));
-						//System.out.println("BASE 1010 " + pItems[0].trim() + " : " + params.get(pItems[1].trim()));
-					}
-				}
-			}
-
-			saveMsg = qForm.updateFields(reqParams, viewData, request.getRemoteAddr(), linkData);
-			
-			if("".equals(saveMsg)) {
-				String jumpView = view.getAttribute("jumpview");
-				BElement fView = view.getElementByName("FORMVIEW");
-				dataItem = qForm.getKeyField();
-				viewData.set(vds - 1, dataItem);
-
-				// Create an allowance to excecute a function after new or updateCombo
-				String postFnct = view.getAttribute("post_fnct");
-				if(postFnct != null) {
-					String upsql = "SELECT " + postFnct + "('" + dataItem + "') ";
-					if(db.getDBType()==2) upsql += " FROM dual";
-					db.executeQuery(upsql);
-				}
-
-				if(jumpView != null) {
-					saveMsg = "<div id='alertSuccessMsg' class='Metronic-alerts alert alert-success fade in'>\n";
-					saveMsg += "		<button aria-hidden='true' data-dismiss='alert' class='close' type='button'></button>\n";
-					saveMsg += view.getAttribute("save.msg", "The record has been updated.") + "\n</div>\n";
-					
-					viewKey = jumpView;
-					webSession.setAttribute("viewkey", jumpView);
-					webSession.setAttribute("loadviewkey", jumpView);
-					webSession.setAttribute("loaddata", dataItem);
-					init(request);
-				} else if(fView != null) {
-					view = fView;
-					views.add(fView);
-					viewData.add(dataItem);
-					viewKeys.add("0");
-					viewKey += ":0";
-				} else {
-								
-					saveMsg = "<div id='alertSuccessMsg' class='Metronic-alerts alert alert-success fade in'>\n";
-					saveMsg += "		<button aria-hidden='true' data-dismiss='alert' class='close' type='button'></button>\n";
-					saveMsg += view.getAttribute("save.msg", "The record has been updated.") + "\n</div>\n";
-				
-					if(vds > 2) {
-						dataItem = viewData.get(vds - 2);
-						view = views.get(vds - 2);
-
-						views.remove(vds - 1);
-						viewData.remove(vds - 1);
-						viewKeys.remove(vds - 1);
-
-						viewKey = viewKey.substring(0, viewKey.lastIndexOf(":"));
-						webSession.setAttribute("viewkey", viewKey);
-					}
-				}
-			} else {
-				String tmsg = saveMsg;
-				
-				saveMsg = "<div class='Metronic-alerts alert alert-danger fade in'>\n";
-				saveMsg += "		<button aria-hidden='true' data-dismiss='alert' class='close' type='button'></button>\n";
-				saveMsg += "<div id='alertErrorMsg'>\n" + tmsg + "\n</div>\n</div>\n";
-			}
-			qForm.close();
-		} else if(view.getName().equals("ACCORDION")) {
-			BElement accdView = view.getElement(0);
-System.out.println("Reached ACCORDION " + vds + " : " + formlink);
-
-			BQuery qAccd = new BQuery(db, accdView, formlink, null);
-			
-			if(vds < 2) {
-				qAccd.recAdd();
-			} else if(linkData == null) {
-				if(qAccd.moveFirst()) qAccd.recEdit();
-			} else if(linkData.equals("!new!")) {
-				qAccd.recAdd();
-				if(accdView.getAttribute("linkfield") != null) 
-					qAccd.updateField(accdView.getAttribute("linkfield"), viewData.get(vds - 2));
-			} else {
-				if(qAccd.moveFirst()) qAccd.recEdit();
-			}
-			
-			saveMsg = qAccd.updateFields(reqParams, viewData, request.getRemoteAddr(), linkData);
-			
-			// Set the jump point
-			dataItem = qAccd.getKeyField();
-			viewData.set(vds - 1, dataItem);
-			webSession.setAttribute("loaddata", dataItem);
-			
-			qAccd.close();
-		}
-	}
-	
 	public void updateForm(String deskKey, int formIndex, HttpServletRequest request) {
 		BElement sDesk = root.getElementByKey(deskKey);
 		BElement sForm = sDesk.getElement(formIndex);
 System.out.println("BASE 1010 : " + sForm.toString());
 
 		BQuery rsForm = new BQuery(db, sForm, null, null);
-		
+
 		rsForm.recAdd();
-		
+
 		Map<String, String[]> reqParams = new HashMap<String, String[]>();
 		Enumeration e = request.getParameterNames();
         while (e.hasMoreElements()) {
@@ -1659,47 +1490,8 @@ System.out.println("BASE 1010 : " + sForm.toString());
 		}
 
 		String saveMsg = rsForm.updateFields(reqParams, viewData, null, null);
-		
+
 		rsForm.close();
-	}
-
-	public void deleteForm(HttpServletRequest request) {
-		String linkData = null;
-		String formlink = null;
-		int vds = viewKeys.size();
-		saveMsg = "";
-		
-		BElement fView = view;
-		if(view.getName().equals("ACCORDION")) fView = view.getElementByName("FORM");
-		if(fView == null) return;
-
-		if(vds > 2) {
-			linkData = viewData.get(vds - 1);
-			if(!linkData.equals("!new!"))
-				formlink = fView.getAttribute("keyfield") + " = '" + linkData + "'";
-		}
-		
-		if(fView.getName().equals("FORM") && (!linkData.equals("!new!"))) {
-			BQuery qForm = new BQuery(db, fView, formlink, null);
-			qForm.movePos(1);
-			qForm.recDelete();
-			qForm.close();
-
-			if(vds > 2) {
-				dataItem = viewData.get(vds - 2);
-				view = views.get(vds - 2);
-
-				views.remove(vds - 1);
-				viewData.remove(vds - 1);
-				viewKeys.remove(vds - 1);
-
-				viewKey = viewKey.substring(0, viewKey.lastIndexOf(":"));
-				webSession.setAttribute("viewkey", viewKey);
-			} else {
-				dataItem = "!new!";
-			}
-			saveMsg = "<div style='color:#00FF00'>Record deleted.</div>";
-		}
 	}
 
 	public String getFieldTitles() {
@@ -1870,6 +1662,8 @@ log.severe("BASE : " + mysql);
 				body = getCsv(request, response);
 			} else if(view.getAttribute("export", "csv").equals("xml")) {
 				body = getXml(request, response);
+			} else if(view.getAttribute("export", "csv").equals("record")) {
+				body = getRecord(request, response);
 			}
 		} else if(view.getName().equals("CROSSTAB")) {
 			body = getCsv(request, response);
@@ -1938,6 +1732,32 @@ log.severe("BASE : " + mysql);
 		
 		return body;
 	}
+
+	public String getRecord(HttpServletRequest request, HttpServletResponse response) {
+		HttpSession session = request.getSession(true);
+		String body = "";
+		wheresql = null;
+		sortby = null;
+
+		// Call the where create function
+		Map<String, String> whereParams = getWhere(request);
+		wheresql = whereParams.get("wheresql");
+
+		BElement sview = null;
+		comboField = request.getParameter("field");
+		if(comboField != null) sview = view.getElement(comboField).getElement(0);
+
+		response.setContentType("text/plain");
+		response.setHeader("Content-Disposition", "attachment; filename=report.txt");
+
+		if(view.getName().equals("GRID")) {
+			BQuery csvData = new BQuery(db, view, wheresql, sortby);
+			body = csvData.getRecord();
+			csvData.close();
+		}
+
+		return body;
+	}
 	
 	public BElement getXmlTable(BElement tableXml, BElement tView, String tWhere, String tSortby) {
 		BQuery xmlData = new BQuery(db, tView, tWhere, tSortby, false);
@@ -1964,7 +1784,7 @@ log.severe("BASE : " + mysql);
 						else if(lCase)  elValue = elValue.toLowerCase();
 					}
 					if(elValue == null) elValue = ifNull;
-					else if(el.getAttribute("raw") == null) elValue = StringEscapeUtils.escapeHtml(elValue);
+					else if(el.getAttribute("raw") == null) elValue = StringEscapeUtils.escapeHtml4(elValue);
 					
 					xel.setValue(elValue);
 					
@@ -2119,23 +1939,9 @@ System.out.println(wherefilter);
 	}
 
 	public String receivePhoto(HttpServletRequest request, String tmpPath) {
-		String pictureFile = "";
-
-		int yourMaxMemorySize = 262144;
-		File yourTempDirectory = new File(tmpPath);
-		DiskFileItemFactory factory = new DiskFileItemFactory(yourMaxMemorySize, yourTempDirectory);
-		ServletFileUpload upload = new ServletFileUpload(factory);
+		String pictureFile = request.getParameter("field");
 		
 		try {
-			List items = upload.parseRequest(request);
-			Iterator itr = items.iterator();
-			while(itr.hasNext()) {
-				FileItem item = (FileItem) itr.next();
-				if (item.isFormField() && item.getFieldName().equals("field")) {
-					pictureField = item.getString();
-				}
-			}
-
 			BElement el = view.getElement(pictureField);
 			long maxfs = (Long.valueOf(el.getAttribute("maxfilesize", "2097152"))).longValue(); 
 			if(el.getAttribute("h") != null) pictureURL = "<img height='" + el.getAttribute("h") + "' width='auto' ";
@@ -2147,37 +1953,34 @@ System.out.println(wherefilter);
 			BWebdav webdav = new BWebdav(repository, username, password);
 			//webdav.listDir("");
 
-			Iterator ftr = items.iterator();
-			while(ftr.hasNext()) {
-				FileItem item = (FileItem) ftr.next();
-				if (!item.isFormField()) {
-					String contentType = item.getContentType();
-					String fieldName = item.getFieldName();
-					String fileName = item.getName();
-					long fs = item.getSize();
 
-					String ext = null;
-					int i = fileName.lastIndexOf('.');
-					if(i>0 && i<fileName.length()-1) 
-						ext = fileName.substring(i+1).toLowerCase();
-					if(ext == null) ext = "NAI";
-					pictureFile = db.executeFunction("SELECT nextval('picture_id_seq')");
-					pictureFile += "pic." + ext;
-					pictureURL += "&picture=" + pictureFile + "'>";
+			for (Part part : request.getParts()) {
+				String contentType = part.getContentType();
+				String fieldName = part.getName();
+				String fileName = BWebUtils.getFileName(part.getHeader("content-disposition"));
+				long fs = part.getSize();
 
-					String[] imageTypes = {"JPEG", "JPG", "JFIF", "TIFF", "TIF", "GIF", "BMP", "PNG"};
-					ext = ext.toUpperCase().trim();
-					if(Arrays.binarySearch(imageTypes, ext) >= 0) {
-						if(fs < maxfs) webdav.saveFile(item.getInputStream(), pictureFile);
-						else pictureFile = "";
-					} else {
-						pictureFile = "";
-					}
+				String ext = null;
+				int i = fileName.lastIndexOf('.');
+				if(i>0 && i<fileName.length()-1)
+					ext = fileName.substring(i+1).toLowerCase();
+				if(ext == null) ext = "NAI";
+				pictureFile = db.executeFunction("SELECT nextval('picture_id_seq')");
+				pictureFile += "pic." + ext;
+				pictureURL += "&picture=" + pictureFile + "'>";
+
+				String[] imageTypes = {"JPEG", "JPG", "JFIF", "TIFF", "TIF", "GIF", "BMP", "PNG"};
+				ext = ext.toUpperCase().trim();
+				if(Arrays.binarySearch(imageTypes, ext) >= 0) {
+					if(fs < maxfs) webdav.saveFile(part.getInputStream(), pictureFile);
+					else pictureFile = "";
+				} else {
+					pictureFile = "";
 				}
 			}
-		} catch (FileUploadException ex) {
+		} catch(ServletException ex) {
 			pictureFile = "";
-			System.out.println("File upload exception " + ex);
+			log.severe("IO Error : " + ex);
 		}  catch(IOException ex) {
 			pictureFile = "";
 			System.out.println("File saving failed Exception " + ex);
@@ -2279,8 +2082,8 @@ System.out.println(wherefilter);
 	}
 	
 	public String getJSONGridData(String linkData, String subViewKey) {	
-		Integer pageStart = new Integer(0);
-		Integer pageSize = new Integer(0);
+		Integer pageStart = Integer.valueOf(0);
+		Integer pageSize = Integer.valueOf(0);
 		BJSONQuery JSONQuery = new BJSONQuery(db, view, wheresql, sortby, pageStart, pageSize);
 		String JSONStr = JSONQuery.getJSONData(subViewKey, false);
 		JSONQuery.close();
@@ -2357,6 +2160,26 @@ System.out.println(wherefilter);
 		return " enctype=\"multipart/form-data\" ";
 	}
 
+	public String getEditorPosting() {
+		String editorPost = "";
+
+		BElement sela = view;
+		if(view.getName().equals("ACCORDION")) {
+			sela = view.getElementByName("FORM");
+		}
+
+		for(BElement ela : sela.getElements()) {
+			if(ela.getName().equals("EDITOR")) {
+				editorPost += "var data_" + ela.getValue()
+					+ " = CKEDITOR.instances['" + ela.getValue() + "'].getData();\n"
+					+ "bData.delete('" + ela.getValue() + "');\n"
+					+ "bData.append('" + ela.getValue() + "', data_" + ela.getValue() + ");\n";
+			}
+		}
+
+		return editorPost;
+	}
+
 	public boolean hasChildren() {
 		boolean hasSubs = false;
 		for(BElement el : view.getElements()) {
@@ -2398,6 +2221,19 @@ System.out.println(wherefilter);
 		if(view.getName().equals("FORM")) elForm = true;
 		return elForm;
 	}
+	
+	public boolean isAccordion() {
+		if(view == null) return false;
+		if(view.getName().equals("ACCORDION")) return true;
+		return false; 
+	}
+	
+	public boolean isGrid() {
+		if(view == null) return false;
+		if(view.getName().equals("GRID")) return true;
+		return false; 
+	}
+
 
 	public boolean isEditField() {
 		boolean editField = false;
@@ -2460,13 +2296,24 @@ System.out.println(wherefilter);
 		
 		return isLicense;
 	}
+
+	public int getPasswordCheck() {
+		int passwordOkay = 1;
+
+		if(root != null) {
+			String sqlPasswordCheck = root.getAttribute("password_check");
+			if(sqlPasswordCheck != null) {
+				sqlPasswordCheck = "SELECT " + sqlPasswordCheck + "('" + userID + "')";
+				String pOk = db.executeFunction(sqlPasswordCheck);
+				if(pOk == null) pOk = "1";
+				passwordOkay = Integer.parseInt(pOk);
+			}
+		}
+
+		return passwordOkay;
+	}
 	
 	public String getAccordionJs() { return accordionJs; }
-	public boolean isGrid() {
-		if(view == null) return false;
-		if(view.getName().equals("GRID")) return true;
-		return false; 
-	}
 	public String getPictureField() { return pictureField; }
 	public String getPictureURL() { return pictureURL; }
 	public BDB getDB() { return db; }

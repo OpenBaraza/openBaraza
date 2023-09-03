@@ -30,7 +30,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.WindowListener;
 
 import javax.swing.UIManager;
-import javax.swing.JApplet;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
@@ -51,7 +50,7 @@ import org.baraza.DB.BTableModel;
 import org.baraza.reports.BReport;
 import org.baraza.utils.BAmountInWords;
 
-public class BOBCheque extends JApplet implements Printable, ActionListener, ListSelectionListener, WindowListener {
+public class BOBCheque implements Printable, ActionListener, ListSelectionListener, WindowListener {
 	List<String> prnline;
 	List<Integer> prnx;
 	List<Integer> prny;
@@ -75,11 +74,6 @@ public class BOBCheque extends JApplet implements Printable, ActionListener, Lis
 	public static void main(String args[]) {
 		BOBCheque prn = new BOBCheque();
 		prn.addFrame();
-	}
-
-	public void init() {		// Run an applet
-		a_prn = new BOBCheque();
-		getContentPane().add(a_prn.splitPane);
 	}
 
 	public void destroy() {
@@ -320,7 +314,7 @@ public class BOBCheque extends JApplet implements Printable, ActionListener, Lis
 
 	public void exportData() {
 		JFileChooser fc = new JFileChooser();
-		int returnVal = fc.showSaveDialog(this);
+		int returnVal = fc.showSaveDialog(panel);
 		if (returnVal == JFileChooser.APPROVE_OPTION) {
 			String filename = fc.getSelectedFile().getAbsolutePath() + ".csv";
 			eftTModel.savecvs(filename);

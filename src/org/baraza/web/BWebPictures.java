@@ -24,19 +24,17 @@ import java.io.IOException;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
-
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.ServletException;
 
 import org.baraza.DB.BDB;
 import org.baraza.DB.BQuery;
+import org.baraza.utils.BWebUtils;
 import org.baraza.utils.BWebdav;
 
 public class BWebPictures extends HttpServlet {
@@ -59,7 +57,7 @@ public class BWebPictures extends HttpServlet {
 		String repository = config.getInitParameter("repository_url");
 		String username = config.getInitParameter("rep_username");
 		String password = config.getInitParameter("rep_password");
-System.out.println("repository : " + repository);
+//System.out.println("repository : " + repository);
 		webdav = new BWebdav(repository, username, password);
 		
 		/* These URL used as
@@ -79,6 +77,7 @@ System.out.println("repository : " + repository);
 	public void showPhoto(HttpServletRequest request, HttpServletResponse response) {
 		String pictureFile = request.getParameter("picture");
 		String access = request.getParameter("access");
+//System.out.println("Picture : " + pictureFile + " " + access);
 		InputStream in = webdav.getFile(pictureFile);
 
 		int dot = pictureFile.lastIndexOf(".");
@@ -117,24 +116,17 @@ System.out.println("repository : " + repository);
 		ServletContext context = this.getServletContext();
 		String ps = System.getProperty("file.separator");
 		String tmpPath = context.getRealPath("WEB-INF" + ps + "tmp");
-		
-		int yourMaxMemorySize = 262144;
-		File yourTempDirectory = new File(tmpPath);
-		DiskFileItemFactory factory = new DiskFileItemFactory(yourMaxMemorySize, yourTempDirectory);
-		ServletFileUpload upload = new ServletFileUpload(factory);
-		
+
 		Map<String, String> reqParams = new HashMap<String, String>();
+		Map<String,String[]> paramMap = request.getParameterMap();
+		for(String paramName : paramMap.keySet()) reqParams.put(paramName, paramMap.get(paramName)[0]);
+
 		try {
-			List items = upload.parseRequest(request);
-			Iterator itr = items.iterator();
-			while(itr.hasNext()) {
-				FileItem item = (FileItem) itr.next();
-				if(item.isFormField()) {
-					reqParams.put(item.getFieldName(), item.getString());
-				} else if(item.getSize() > 0) {
-					String pictureFile = savePicture(item, context);
+			for (Part part : request.getParts()) {
+				if((part.getContentType() != null) && (part.getSize() > 0)) {
+					String pictureFile = savePicture(part);
 					if(pictureFile != null) {
-						reqParams.put(item.getFieldName(), pictureFile);
+						reqParams.put(part.getName(), pictureFile);
 						jResp.put("picture_name", pictureFile);
 						jResp.put("error", false);
 					} else {
@@ -142,8 +134,10 @@ System.out.println("repository : " + repository);
 					}
 				}
 			}
-		} catch (FileUploadException ex) {
-			log.severe("File upload exception " + ex);
+		} catch(IOException ex) {
+			log.severe("IO Error : " + ex);
+		} catch(ServletException ex) {
+			log.severe("IO Error : " + ex);
 		}
 		
 		try {
@@ -153,13 +147,13 @@ System.out.println("repository : " + repository);
 		
 	}
 	
-	public String savePicture(FileItem item, ServletContext config) {
+	public String savePicture(Part part) {
 		String pictureFile = null;
 
-		String contentType = item.getContentType();
-		String fieldName = item.getFieldName();
-		String fileName = item.getName();
-		long fs = item.getSize();
+		String contentType = part.getContentType();
+		String fieldName = part.getName();
+		String fileName = BWebUtils.getFileName(part.getHeader("content-disposition"));
+		long fs = part.getSize();
 
 		long maxfs = 4194304;
 
@@ -175,7 +169,7 @@ System.out.println("repository : " + repository);
 
 			if(Arrays.binarySearch(imageTypes, ext) >= 0) {
 				if(fs < maxfs) {
-					webdav.saveFile(item.getInputStream(), pictureName);
+					webdav.saveFile(part.getInputStream(), pictureName);
 					pictureFile = pictureName;
 				}
 			}

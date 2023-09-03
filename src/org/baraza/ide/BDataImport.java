@@ -64,6 +64,7 @@ public class BDataImport extends JPanel implements ActionListener {
 	BDB db;
 	String projectDir;
 	File excelFile = null;
+	int workSheet = 0;
 	
 	JPanel controls, bodyPanel, pnFields, pnButtons;
 	JButton[] button;
@@ -87,7 +88,7 @@ public class BDataImport extends JPanel implements ActionListener {
 		super.add(controls, BorderLayout.PAGE_START);
 		
 		pnFields = new JPanel(new FlowLayout());
-		String[] txtArray = {"Fields", "Columns", "Sub Titles", "Split Name"};
+		String[] txtArray = {"Fields", "Columns", "Sub Titles", "Split Name", "Worksheet"};
 		txtFields = new JTextField[txtArray.length];
 		JLabel[] lblFields = new JLabel[txtArray.length];
 		for(int i = 0; i < txtArray.length; i++) {
@@ -99,10 +100,11 @@ public class BDataImport extends JPanel implements ActionListener {
 		txtFields[0].setText("Title0,Title1,Title2,Title3,Title4,Title5,Title6,Title7,Title8,Title9");
 		txtFields[0].setColumns(40);
 		txtFields[1].setText("15");
+		txtFields[4].setText("0");
 		controls.add(pnFields, BorderLayout.PAGE_START);
 
 		pnButtons = new JPanel(new FlowLayout());
-		String[] btnArray = {"Select File", "Set Columns", "Read Headers", "Title to Column", "Create Table", "Export Data", "import Data"};
+		String[] btnArray = {"Select File", "Set Columns", "Read Headers", "Title to Column", "Create Table", "Export Data", "Import Data", "Auto Import"};
 		button = new JButton[btnArray.length];
 		for(int i = 0; i < btnArray.length; i++) {
 			button[i] = new JButton(btnArray[i]);
@@ -141,14 +143,7 @@ public class BDataImport extends JPanel implements ActionListener {
 		String aKey = ev.getActionCommand();
 		
 		if(aKey.equals("Select File")) {
-			JFileChooser fc = new JFileChooser(projectDir);
-			fc.setDialogTitle("Open Resource File");
-			int returnVal = fc.showOpenDialog(this);
-			
-			if (returnVal == JFileChooser.APPROVE_OPTION) {
-				excelFile = fc.getSelectedFile();
-				selectFile();
-			}
+			autoImport(0);
 		} else if(aKey.equals("Set Columns")) {
 			setColumns();
 		} else if(aKey.equals("Read Headers")) {
@@ -159,17 +154,20 @@ public class BDataImport extends JPanel implements ActionListener {
 			titleToColumn();
 		} else if(aKey.equals("Create Table")) {
 			createImportTable();
-		} else if(aKey.equals("import Data")) {
+		} else if(aKey.equals("Import Data")) {
 			importData();
+		} else if(aKey.equals("Auto Import")) {
+			autoImport(1);
 		}
 	}
 	
-	public void selectFile() {
+	public int selectFile() {
+		int nofSheets = 0;
 		if(excelFile != null) {
 			String myFieldList = txtFields[0].getText();
 			String[] myFields = myFieldList.split(",");
 			myTitles = new Vector<String>(Arrays.asList(myFields));
-			readFile(excelFile, 0, 0, myTitles.size());
+			nofSheets = readFile(excelFile, 0, myTitles.size());
 	
 			vectorTableMode = new BVectorTableModel(myData, myTitles);
 			table.setModel(vectorTableMode);
@@ -177,10 +175,12 @@ public class BDataImport extends JPanel implements ActionListener {
 			table.setAutoCreateRowSorter(true);
 			table.repaint();
 		}
+		
+		return nofSheets;
 	}
 	
 	public void setColumns() {
-		Integer cols = new Integer(txtFields[1].getText());
+		Integer cols = Integer.valueOf(txtFields[1].getText());
 		String sTitles = "Title0";
 		for(int j = 1; j < cols; j++) sTitles += ",Title" + j;
 		
@@ -200,21 +200,25 @@ public class BDataImport extends JPanel implements ActionListener {
 			impTable += "\t" + tableName + "_id\t\t\tserial primary key,\n";
 			String impData = "INSERT INTO " + tableName + " (";
 			for(int j = 0; j < firstRow.size(); j++) {
-				if(j != 0) sTitles += ",";
-				String fieldName = firstRow.get(j).replace(" ", "_").trim().toLowerCase();
-				sTitles += fieldName;
+				String fieldName = formatFieldName(firstRow.get(j));
 				
-				impTable += "\t" + fieldName + "\t\t\tvarchar(250)";
-				impData += fieldName;
-				if(j < firstRow.size() - 1) {
-					impTable += ",\n";
-					impData += ", ";
+				if(!"".equals(fieldName)) {
+					if(j != 0) {
+						sTitles += ",";
+						impTable += ",\n";
+						impData += ", ";
+					}
+					sTitles += fieldName;
+					impTable += "\t" + fieldName + "\t\t\tvarchar(250)";
+					impData += fieldName;
+
+					System.out.println(fieldName);
 				}
 			}
 			impTable += "\n);\n\n";
 			impData += ") VALUES\n";
 					
-			area1.append(impTable);
+			area1.setText(impTable);
 			area2.append(impData);
 			
 			txtFields[0].setText(sTitles);
@@ -223,7 +227,7 @@ public class BDataImport extends JPanel implements ActionListener {
 	}
 	
 	public void titleToColumn() {
-		Integer cols = new Integer(txtFields[1].getText());
+		Integer cols = Integer.valueOf(txtFields[1].getText());
 		if(txtFields[2].getText().length() > 0) {
 			String[] strSubTitles = txtFields[2].getText().toUpperCase().split(",");
 			String[] strSubValues = new String[strSubTitles.length];
@@ -247,7 +251,7 @@ public class BDataImport extends JPanel implements ActionListener {
 	
 	public void exportData() {
 		int splitCol = -1;
-		if(txtFields[3].getText().length() > 0) splitCol = new Integer(txtFields[3].getText());
+		if(txtFields[3].getText().length() > 0) splitCol = Integer.valueOf(txtFields[3].getText());
 		for(int i = 0; i < myData.size(); i++) {
 			Vector<String> myRow = myData.get(i);
 			
@@ -276,7 +280,7 @@ public class BDataImport extends JPanel implements ActionListener {
 		}
 	}
 
-	public void readFile(File file, int worksheet, int firstRow, int columnCount) {
+	public int readFile(File file, int firstRow, int columnCount) {
 		myData = new Vector<Vector<String>>();
 		
 		Workbook wb = null;
@@ -287,9 +291,10 @@ public class BDataImport extends JPanel implements ActionListener {
 		} catch (IOException ex) {
 			System.out.println("an I/O error occurred, or the InputStream did not provide a compatible POIFS data structure : " + ex);
 		}
-		Sheet sheet = wb.getSheetAt(worksheet);
+		int nofSheets = wb.getNumberOfSheets();
+		Sheet sheet = wb.getSheetAt(workSheet);
 
-		String wsName = wb.getSheetName(worksheet);
+		String wsName = wb.getSheetName(workSheet);
 		System.out.println(wsName);
 		txtTableName.setText("imp_" + wsName);
 		int noOfColumns = sheet.getRow(0).getPhysicalNumberOfCells();
@@ -315,6 +320,8 @@ public class BDataImport extends JPanel implements ActionListener {
 		
 		//area1.selectAll();
 		//area1.replaceSelection("");
+		
+		return nofSheets;
 	}
 	
 	public String getCellValue(Row row, int column) {
@@ -355,7 +362,9 @@ public class BDataImport extends JPanel implements ActionListener {
 			String impValues = ") VALUES (";
 			for(int j = 0; j < firstRow.size(); j++) {
 				if(j != 0) {impData += ","; impValues += ","; }
-				String fieldName = firstRow.get(j).replace(" ", "_").trim().toLowerCase();
+
+				String fieldName = formatFieldName(firstRow.get(j));
+
 				impData += fieldName;
 				impValues += "?";
 			}
@@ -366,12 +375,49 @@ public class BDataImport extends JPanel implements ActionListener {
 				Vector<String> myRow = myData.get(i);
 				Map<String, String> mData = new LinkedHashMap<String, String>();
 				for(int j = 0; j < myRow.size(); j++) {
-					String fieldName = firstRow.get(j).replace(" ", "_").trim().toLowerCase();
+					String fieldName = formatFieldName(firstRow.get(j));
+
 					mData.put(fieldName, myRow.get(j));
 				}
 				String keyFieldId = db.saveRec(inSql, mData);
 			}
 		}
+	}
+	
+	public void autoImport(int importType) {
+		JFileChooser fc = new JFileChooser(projectDir);
+		fc.setDialogTitle("Open Resource File");
+		int returnVal = fc.showOpenDialog(this);
+		
+		if (returnVal == JFileChooser.APPROVE_OPTION) {
+			excelFile = fc.getSelectedFile();
+			workSheet = Integer.valueOf(txtFields[4].getText());
+			int nofSheets = selectFile();
+			System.out.println("Number of sheets : " + nofSheets);
+			
+			if(importType == 1) {
+				for(workSheet = 0; workSheet < nofSheets; workSheet++) {
+					selectFile();
+					setColumns();
+					readHeaders();
+					titleToColumn();
+					createImportTable();
+					importData();
+				}
+			}
+		}
+	}
+
+	public String formatFieldName(String fieldName) {
+		if(fieldName == null) return "";
+		if(fieldName.indexOf("{") > 0) fieldName = fieldName.substring(0, fieldName.indexOf("{")).trim();
+		fieldName = fieldName.replace(" ", "_").trim().toLowerCase();
+		fieldName = fieldName.replace(".", "").trim();
+		fieldName = fieldName.replace("'", "").trim();
+		fieldName = fieldName.replace("\"", "_").trim();
+		fieldName = fieldName.replace("/", "_").trim();
+		fieldName = fieldName.replace("-", "_").trim();
+		return fieldName;
 	}
 
 }

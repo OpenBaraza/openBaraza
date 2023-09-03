@@ -13,7 +13,6 @@
 	<APP path="umis" dbname="umis" auth="entity" dbclass="org.postgresql.Driver" dbpassword="Baraza2011" dbusername="postgres" dbpath="jdbc:postgresql://localhost/umis" xmlfile="finance.xml">UMIS Finance</APP>
 	<APP path="umis" dbname="umis" auth="entity" dbclass="org.postgresql.Driver" dbpassword="Baraza2011" org="org_id" dbusername="postgres" dbpath="jdbc:postgresql://localhost/umis" xmlfile="web/students.xml">UMIS Students</APP>
 	<APP path="schools" dbname="schools" dbclass="org.postgresql.Driver" dbpassword="Baraza2011" dbusername="postgres" dbpath="jdbc:postgresql://localhost/schools" key="school" xmlfile="schools.xml">Schools</APP>
-	<APP path="qa" dbname="qa" dbclass="org.postgresql.Driver" dbpassword="Baraza2011" dbusername="postgres" dbpath="jdbc:postgresql://localhost/qa" key="qa" xmlfile="qa.xml">QA</APP>
 	<APP path="baraza" dbname="baraza" auth="entity" dbclass="org.postgresql.Driver" dbpassword="Baraza2011" dbusername="postgres" dbpath="jdbc:postgresql://localhost/baraza" key="baraza" xmlfile="baraza.xml">Baraza</APP>
 	<SERVER path="hr" dbname="hr" dbclass="org.postgresql.Driver" dbpassword="Baraza2011" disable="false" dbusername="postgres" dbpath="jdbc:postgresql://localhost/hr" xmlfile="tomcat.xml">HR Tomcat Server</SERVER>
 	<SERVER path="hr" dbname="hr" dbclass="org.postgresql.Driver" dbpassword="Baraza2011" disable="true" dbusername="postgres" dbpath="jdbc:postgresql://localhost/hr" xmlfile="mail.xml">HR Mailing Server</SERVER>

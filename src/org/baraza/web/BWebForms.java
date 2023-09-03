@@ -8,41 +8,15 @@
  */
 package org.baraza.web;
 
-import org.apache.poi.poifs.filesystem.*;
-import org.apache.poi.hssf.usermodel.*;
-
-import java.util.logging.Logger;
-import java.util.Map;
 import java.util.HashMap;
-import java.util.List;
-import java.util.ArrayList;
-import java.text.SimpleDateFormat;
-import java.text.ParseException;
+import java.util.Map;
+import java.util.logging.Logger;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-import java.io.File;
-import java.io.InputStream;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.PrintWriter;
-
-import org.json.JSONObject;
 import org.json.JSONArray;
-
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
-import org.apache.commons.fileupload.FileItem;
-import org.apache.commons.fileupload.FileUploadException;
-import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.json.JSONObject;
 
 import org.baraza.DB.BDB;
 import org.baraza.DB.BQuery;
-import org.baraza.xml.BXML;
-import org.baraza.xml.BElement;
-import org.baraza.utils.BNumberFormat;
-import org.baraza.utils.BCipher;
 
 public class BWebForms {
 	Logger log = Logger.getLogger(BWebForms.class.getName());
@@ -91,15 +65,10 @@ public class BWebForms {
 System.out.println(action);
 		if((action == null) || (action.trim().equals("FORM"))) {
 			formid = getParameter("actionvalue");
-entryFormId = getParameter("actionvalue");
-			Map<String, String> formRS = db.readFields("form_id, entity_id, approve_status, answer", "entry_forms WHERE entry_form_id = " + entryFormId);
-			processAnswers(formRS.get("answer"));
-			formid = formRS.get("form_id");
-			entityId = formRS.get("entity_id");
-			approveStatus = formRS.get("approve_status");
 			
-			if((entryFormId != null) && "Draft".equals(approveStatus)) saveStatus = true;
+			Map<String, String> formRS = new HashMap<String, String>();
 			
+			saveStatus = false;
 		} else {
 			entryFormId = getParameter("actionvalue");
 			Map<String, String> formRS = db.readFields("form_id, entity_id, approve_status, answer", "entry_forms WHERE entry_form_id = " + entryFormId);
@@ -109,8 +78,6 @@ entryFormId = getParameter("actionvalue");
 			approveStatus = formRS.get("approve_status");
 			
 			if((entryFormId != null) && "Draft".equals(approveStatus)) saveStatus = true;
-			
-
 		}
 		
 		getFormType();
