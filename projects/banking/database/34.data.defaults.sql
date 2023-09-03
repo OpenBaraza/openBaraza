@@ -16,10 +16,6 @@ INSERT INTO entity_types (org_id, entity_type_name, entity_role, use_key_id) VAL
 INSERT INTO entity_types (org_id, entity_type_name, entity_role, use_key_id) VALUES (1, 'Applicant', 'applicant', 4);
 INSERT INTO entity_types (org_id, entity_type_name, entity_role, use_key_id) VALUES (1, 'Bank Customers', 'client', 100);
 
-INSERT INTO subscription_levels (org_id, subscription_level_name) VALUES (1, 'Basic');
-INSERT INTO subscription_levels (org_id, subscription_level_name) VALUES (1, 'Consumer');
-INSERT INTO subscription_levels (org_id, subscription_level_name) VALUES (1, 'Manager');
-
 INSERT INTO locations (org_id, location_name) VALUES (1, 'Head Office');
 INSERT INTO departments (org_id, department_name) VALUES (1, 'Board of Directors');
 
@@ -105,11 +101,6 @@ FROM vw_account_definations as ad INNER JOIN products ON ad.product_no = product
 	INNER JOIN activity_types as charge_activity ON ad.charge_activity_no = charge_activity.activity_type_no
 WHERE (ad.org_id = 0) AND (products.org_id = 1)
 	AND (activity_types.org_id = 1) AND (charge_activity.org_id = 1);
-	
-INSERT INTO sys_emails (org_id, use_type,  sys_email_name, title, details) 
-SELECT 1, use_type, sys_email_name, title, details
-FROM sys_emails
-WHERE org_id = 0;
 
 INSERT INTO workflows (link_copy, org_id, source_entity_id, workflow_name, table_name, approve_email, reject_email) 
 SELECT aa.workflow_id, cc.org_id, cc.entity_type_id, aa.workflow_name, aa.table_name, aa.approve_email, aa.reject_email

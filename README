@@ -16,7 +16,7 @@ Baraza is a system that incorporates different independent projects that work in
 
 Setup
 
-1. install Postgresql http://www.postgresql.org/ above version 9.4
+1. install Postgresql http://www.postgresql.org/ above version 12
 	Linux Installation
 	- yum install postgresql-server
 	- service postgresql initdb - (Optional - will clear all databases)
@@ -28,22 +28,26 @@ Setup
 	{ To make the installation easier you can set the password for user postgres durting the installation to Baraza2011 }
 	{ Remember to change it for a live deployment }
 
-2. install Java http://www.oracle.com/technetwork/java/javase/downloads/index.html version 1.8.45 and above
+2. Install Java https://openjdk.org/ version 17 and above
 
-3. Download baraza.2.8.zip and unzip it on any folder
+3. Install apache ant from https://ant.apache.org/
 
-4. Run the Ide
-	cd ./baraza.2.8/
+4. Build the applications by running
+cd ./openBaraza/
+ant
+
+5. Run the Ide
+	cd ./openBaraza/
 	Linux : ./ide.sh
 	Windows : double click on setup.bat in app folder
 
-5. Click on 
+6. Click on 
 	Test Connection - {To test connection to the database}
 	Save Configutations - {In case you change user name or password connecting to the database }
 	Create New - {Create a new blank database}
 	Create Demo - {Create a demo database}
 
-6. Running the appplication
+7. Running the appplication
 	Web Application
 	Linux : sh server.sh
 	Windows : server.bar
@@ -63,7 +67,7 @@ Setup
 	Linux : sh ide.sh
 	Windows : ide.bar
 
-7. If you have many application to run in tomcat downlaod the 
+8. If you have many application to run in tomcat downlaod the 
 	No DB configuration will be needed. There is a README file for the .war in the war folder
 
 USER PASSWORDS
