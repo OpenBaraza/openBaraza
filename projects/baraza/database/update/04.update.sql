@@ -4,6 +4,8 @@ DROP TABLE sys_apps;
 CREATE TABLE sys_apps (
 	sys_app_id				serial primary key,
 	sys_app_name			varchar(50) not null unique,
+	sys_app_code			varchar(16) not null unique,
+	sys_app_group			varchar(16),
 	is_active				boolean default true not null,
 	details					text
 );
@@ -23,8 +25,10 @@ CREATE TABLE org_apps (
 	sys_app_id				integer references sys_apps,
 	org_id					integer references orgs,
 	price					real default 0 not null,
+	user_accounts			integer default 1 not null,
 	is_montly_bill			boolean default true not null,
 	is_annual_bill			boolean default false not null,
+	is_active				boolean default true not null,
 	created					timestamp default current_timestamp not null,
 	details					text,
 	UNIQUE(sys_app_id, org_id)
@@ -37,6 +41,7 @@ CREATE TABLE org_app_modules (
 	sys_app_module_id		integer references sys_app_modules,
 	org_id					integer references orgs,
 	price					real default 0 not null,
+	user_accounts			integer default 1 not null,
 	is_active				boolean default true not null,
 	created					timestamp default current_timestamp not null,
 	details					text,
@@ -64,25 +69,34 @@ ALTER TABLE sys_access_levels ADD	sys_app_module_id		integer references sys_app_
 CREATE INDEX sys_access_levels_sys_app_module_id ON sys_access_levels (sys_app_module_id);
 
 CREATE VIEW vw_sys_app_modules AS
-	SELECT sys_apps.sys_app_id, sys_apps.sys_app_name, 
+	SELECT sys_apps.sys_app_id, sys_apps.sys_app_name, sys_apps.sys_app_code, sys_apps.sys_app_group,
 		sys_app_modules.sys_app_module_id, sys_app_modules.sys_app_module_name, sys_app_modules.price, 
 		sys_app_modules.is_default, sys_app_modules.details
 	FROM sys_app_modules INNER JOIN sys_apps ON sys_app_modules.sys_app_id = sys_apps.sys_app_id;
+	
+CREATE VIEW vw_sys_avail_modules AS
+	SELECT sys_apps.sys_app_id, sys_apps.sys_app_name, sys_apps.sys_app_code, sys_apps.sys_app_group,
+		org_apps.org_app_id, org_apps.org_id,
+		sys_app_modules.sys_app_module_id, sys_app_modules.sys_app_module_name, sys_app_modules.price, 
+		sys_app_modules.is_default, sys_app_modules.details
+	FROM sys_app_modules INNER JOIN sys_apps ON sys_app_modules.sys_app_id = sys_apps.sys_app_id
+		INNER JOIN org_apps ON sys_apps.sys_app_id = org_apps.sys_app_id
+	WHERE (org_apps.is_active = true);
 
 CREATE VIEW vw_org_apps AS
-	SELECT sys_apps.sys_app_id, sys_apps.sys_app_name,
+	SELECT sys_apps.sys_app_id, sys_apps.sys_app_name, sys_apps.sys_app_code, sys_apps.sys_app_group,
 		orgs.org_id, orgs.org_name, 
-		org_apps.org_app_id, org_apps.price, org_apps.created, 
+		org_apps.org_app_id, org_apps.price, org_apps.user_accounts, org_apps.created, 
 		org_apps.is_montly_bill, org_apps.is_annual_bill, org_apps.details
 	FROM org_apps INNER JOIN sys_apps ON org_apps.sys_app_id = sys_apps.sys_app_id
 		INNER JOIN orgs ON org_apps.org_id = orgs.org_id;
 
 CREATE VIEW vw_org_app_modules AS
-	SELECT vw_sys_app_modules.sys_app_id, vw_sys_app_modules.sys_app_name,
+	SELECT vw_sys_app_modules.sys_app_id, vw_sys_app_modules.sys_app_name, vw_sys_app_modules.sys_app_group,
 		vw_sys_app_modules.sys_app_module_id, vw_sys_app_modules.sys_app_module_name,
 		orgs.org_id, orgs.org_name,  
 		org_app_modules.org_app_module_id, org_app_modules.price, org_app_modules.created, 
-		org_app_modules.is_active, org_app_modules.details
+		org_app_modules.is_active, org_app_modules.user_accounts, org_app_modules.details
 	FROM org_app_modules INNER JOIN vw_sys_app_modules ON org_app_modules.sys_app_module_id = vw_sys_app_modules.sys_app_module_id
 		INNER JOIN orgs ON org_app_modules.org_id = orgs.org_id;
 
@@ -249,28 +263,33 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER aft_org_app_modules AFTER INSERT OR UPDATE OR DELETE ON org_app_modules
     FOR EACH ROW EXECUTE PROCEDURE aft_org_app_modules();
 
-INSERT INTO sys_apps (sys_app_id, sys_app_name) VALUES
-(0, 'Baraza Core'),
-(1, 'HR'),
-(2, 'Payroll'),
-(3, 'Business'),
-(4, 'Attendance'),
-(5, 'Projects'),
-(6, 'Banking'),
-(7, 'Sacco'),
-(8, 'Chama'),
-(9, 'Welfare'),
-(10, 'Property'),
-(11, 'Judiciary'),
-(15, 'UMIS'),
-(16, 'AIMS'),
-(17, 'School'),
-(20, 'Agency'),
-(21, 'TMIS'),
-(22, 'Hotel Vouchers'),
-(23, 'Pick and Drop'),
-(24, 'Enhanced Client File'),
-(25, 'TravDoc'),
-(26, 'Corporate SMS'),
-(27, 'TravSMS');
+INSERT INTO sys_apps (sys_app_id, sys_app_name, sys_app_code, sys_app_group) VALUES
+(0, 'Baraza Core', 'baraza', 'baraza'),
+(1, 'HR', 'hr', 'business'),
+(2, 'Payroll', 'payroll', 'business'),
+(3, 'Business', 'business', 'business'),
+(4, 'Attendance', 'attendance', 'business'),
+(5, 'Projects', 'projects', 'business'),
+(6, 'Banking', 'banking', 'finance'),
+(7, 'Sacco', 'sacco', 'finance'),
+(8, 'Chama', 'chama', 'finance'),
+(9, 'Welfare', 'welfare', 'finance'),
+(10, 'Property Management', 'property', 'property'),
+(11, 'Judiciary', 'judiciary', 'judiciary'),
+(15, 'UMIS', 'umis', 'academics'),
+(16, 'AIMS', 'aims', 'academics'),
+(17, 'School', 'school', 'academics'),
+(20, 'Agency', 'agency', 'travel'),
+(21, 'TravMIS', 'tmis', 'travel'),
+(22, 'Hotel Vouchers', 'voucher', 'travel'),
+(23, 'Pick and Drop', 'pnd', 'travel'),
+(24, 'Enhanced Client File', 'clientfile', 'travel'),
+(25, 'TravDoc', 'travdoc', 'travel'),
+(26, 'Corporate SMS', 'sms', 'business'),
+(27, 'TravSMS', 'travsms', 'travel'),
+(28, 'Vikoba Sacco', 'vikoba', 'finance'),
+(29, 'Hotel Reservation', 'hotel', 'travel'),
+(30, 'TravMPesa', 'tmpesa', 'travel'),
+(31, 'Travel Insurance', 'tinsurance', 'travel');
+
 

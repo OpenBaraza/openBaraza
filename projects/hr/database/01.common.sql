@@ -170,7 +170,7 @@ CREATE VIEW vw_entitys AS
 		entitys.function_role, entitys.attention, entitys.primary_email, entitys.primary_telephone,
 		entitys.credit_limit
 
-	FROM (entitys LEFT JOIN vw_address_entitys as addr ON entitys.entity_id = addr.table_id)
+	FROM (entitys LEFT JOIN vw_entity_address as addr ON entitys.entity_id = addr.table_id)
 		INNER JOIN vw_orgs ON entitys.org_id = vw_orgs.org_id
 		INNER JOIN entity_types ON entitys.entity_type_id = entity_types.entity_type_id;
 

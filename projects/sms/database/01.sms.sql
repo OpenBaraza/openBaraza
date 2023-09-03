@@ -6,6 +6,12 @@ ALTER TABLE orgs ADD send_fon varchar(16);
 ALTER TABLE orgs ADD sms_rate real default 2 not null;
 ALTER TABLE orgs ADD show_fare boolean default false;
 ALTER TABLE orgs ADD gds_free_field integer default 96;
+ALTER TABLE orgs ADD sc_register char(1) default 'f' not null;
+ALTER TABLE orgs ADD ait_username varchar(64);
+ALTER TABLE orgs ADD ait_app_key varchar(64);
+ALTER TABLE orgs ADD alphanumeric varchar(64);
+ALTER TABLE orgs ADD air_touch_key varchar(64);
+ALTER TABLE orgs ADD provider_id integer default 0 not null;
 
 ALTER TABLE address ADD CONSTRAINT address_org_id_mobile_key UNIQUE (org_id, mobile);
 
@@ -25,45 +31,6 @@ CREATE INDEX firms_org_id ON firms (org_id);
 
 ALTER TABLE address ADD firm_id	integer references firms;
 CREATE INDEX address_firm_id ON address (firm_id);
-
-CREATE TABLE mpesa_trxs (
-	mpesa_trx_id			serial primary key,
-	org_id					integer references orgs,
-	mpesa_id				integer,
-	mpesa_orig				varchar(50),
-	mpesa_dest				varchar(50),
-	mpesa_tstamp			timestamp,
-	mpesa_text				varchar(320),
-	mpesa_code				varchar(50),
-	mpesa_acc				varchar(50),
-	mpesa_msisdn			varchar(50),
-	mpesa_trx_date			date,
-	mpesa_trx_time			time,
-	mpesa_amt				real,
-	mpesa_sender			varchar(50),
-	mpesa_pick_time			timestamp default now()
-);
-CREATE INDEX mpesa_trxs_org_id ON mpesa_trxs (org_id);
-
-CREATE TABLE mpesa_soap (
-	mpesa_soap_id			serial primary key,
-	org_id					integer references orgs,
-	request_id				varchar(32),
-	TransID					varchar(32),
-	TransAmount				real,
-	BillRefNumber			varchar(32),
-	TransTime				varchar(32),
-	BusinessShortCode		varchar(32),
-	TransType				varchar(32),
-	FirstName				varchar(32),
-	LastName				varchar(32),
-	MSISDN					varchar(32),
-	OrgAccountBalance		real,
-	InvoiceNumber			varchar(32),
-	ThirdPartyTransID		varchar(32),
-	created					timestamp default current_timestamp not null
-);
-CREATE INDEX mpesa_soap_org_id ON mpesa_soap (org_id);
 
 CREATE TABLE sms_trans (
 	sms_trans_id			serial primary key,
@@ -187,7 +154,8 @@ CREATE TABLE sms_queue (
 	sms_number				varchar(25),
 	sms_price				real default 2 not null,
 	retries					integer default 0 not null,
-	last_retry				timestamp default now()
+	last_retry				timestamp default now(),
+	delivery_time			timestamp
 );
 CREATE INDEX sms_queue_sms_id ON sms_queue (sms_id);
 CREATE INDEX sms_queue_org_id ON sms_queue (org_id);
@@ -204,16 +172,14 @@ CREATE INDEX numbers_imports_address_group_id ON numbers_imports (address_group_
 CREATE INDEX numbers_imports_entity_id ON numbers_imports (entity_id);
 CREATE INDEX numbers_imports_org_id ON numbers_imports (org_id);
 
-CREATE TABLE receipts (
-	receipt_id				serial primary key,
-	mpesa_trx_id			integer references mpesa_trxs,
+CREATE TABLE sms_issues (
+	sms_issue_id			serial primary key,
 	org_id					integer references orgs,
-	receipt_date			date not null,
-	receipt_amount			real not null,
-	details					text
+	resolved				boolean default false not null,
+	created					timestamp default now() not null,
+	narrative				text
 );
-CREATE INDEX receipts_mpesa_trx_id ON receipts (mpesa_trx_id);
-CREATE INDEX receipts_org_id ON receipts (org_id);
+CREATE INDEX sms_issues_org_id ON sms_issues (org_id);
 
 CREATE TABLE sms_configs (
 	sms_config_id			serial primary key,
@@ -226,7 +192,6 @@ CREATE TABLE sms_configs (
 );
 INSERT INTO sms_configs (sms_config_id, last_sent, send_error, error_email, email_time, narrative)
 VALUES (0, current_timestamp, false, false, current_timestamp, null);
-
 
 CREATE TABLE load_units (
 	load_unit_id			serial primary key,
@@ -243,7 +208,6 @@ CREATE INDEX load_units_org_id ON load_units (org_id);
 	
 DROP VIEW vw_entitys;
 DROP VIEW vw_orgs;
-DROP VIEW vw_address_entitys;
 DROP VIEW vw_entity_address;
 DROP VIEW vw_org_address;
 DROP VIEW vw_address;
@@ -327,7 +291,7 @@ CREATE VIEW vw_sms_entitys AS
 		entitys.date_enroled, entitys.is_active, entitys.entity_password, entitys.first_password, 
 		entitys.function_role, entitys.primary_email, entitys.primary_telephone,
 		entity_types.entity_type_id, entity_types.entity_type_name, 
-		entity_types.entity_role, entity_types.use_key, entitys.son
+		entity_types.entity_role, entity_types.use_key_id, entitys.son
 	FROM (entitys LEFT JOIN vw_entity_address ON entitys.entity_id = vw_entity_address.table_id)
 		INNER JOIN orgs ON entitys.org_id = orgs.org_id
 		INNER JOIN entity_types ON entitys.entity_type_id = entity_types.entity_type_id;
@@ -371,11 +335,6 @@ CREATE VIEW vw_sms_address AS
 	FROM sms INNER JOIN folders ON sms.folder_id = folders.folder_id
 		INNER JOIN sms_address ON sms.sms_id = sms_address.sms_id
 		INNER JOIN address ON sms_address.address_id = address.address_id;
-
-CREATE VIEW vw_receipts AS
-	SELECT orgs.org_id, orgs.org_name, receipts.receipt_id, receipts.mpesa_trx_id, receipts.receipt_date, 
-		receipts.receipt_amount, receipts.details
-	FROM receipts INNER JOIN orgs ON receipts.org_id = orgs.org_id;
 	
 CREATE VIEW vw_sms_units AS
 	SELECT orgs.org_id, orgs.org_name, 
@@ -538,4 +497,19 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION aft_sms_queue() RETURNS trigger AS $$
+BEGIN
+	
+	IF(NEW.send_results = 'INSUF100')THEN
+		INSERT INTO sms_issues (org_id, narrative)
+		VALUES (NEW.org_id, 'Load airtel credit');
+	END IF;
+	
+	RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
+CREATE TRIGGER aft_sms_queue AFTER INSERT OR UPDATE ON sms_queue
+    FOR EACH ROW EXECUTE PROCEDURE aft_sms_queue();
+    
+    

@@ -101,25 +101,25 @@ CREATE VIEW vw_entry_forms AS
 
 CREATE OR REPLACE FUNCTION Ins_Entry_Form(varchar(12), varchar(12), varchar(12)) RETURNS varchar(120) AS $$
 DECLARE
-	rec 		RECORD;
-	vorgid		integer;
-	formName 	varchar(120);
-	msg 		varchar(120);
+	rec 				RECORD;
+	v_org_id			integer;
+	v_form_name 		varchar(120);
+	msg 				varchar(120);
 BEGIN
 	SELECT entry_form_id, org_id INTO rec
 	FROM entry_forms 
-	WHERE (form_id = CAST($1 as int)) AND (entity_ID = CAST($2 as int))
+	WHERE (form_id = $1::int) AND (entity_ID = $2::int)
 		AND (approve_status = 'Draft');
 
-	SELECT form_name, org_id INTO formName, vorgid
-	FROM forms WHERE (form_id = CAST($1 as int));
+	SELECT form_name, org_id INTO v_form_name, v_org_id
+	FROM forms WHERE (form_id = $1::int);
 
 	IF rec.entry_form_id is null THEN
 		INSERT INTO entry_forms (form_id, entity_id, org_id) 
-		VALUES (CAST($1 as int), CAST($2 as int), vorgid);
-		msg := 'Added Form : ' || formName;
+		VALUES ($1::int, $2::int, v_org_id);
+		msg := 'Added Form : ' || v_form_name;
 	ELSE
-		msg := 'There is an incomplete form : ' || formName;
+		msg := 'There is an incomplete form : ' || v_form_name;
 	END IF;
 
 	return msg;
@@ -132,15 +132,15 @@ DECLARE
 BEGIN
 	IF ($3 = '1') THEN
 		UPDATE entry_forms SET approve_status = 'Completed', completion_date = now()
-		WHERE (entry_form_id = CAST($1 as int));
+		WHERE (entry_form_id = $1::int) AND (approve_status = 'Draft');
 		msg := 'Completed the form';
 	ELSIF ($3 = '2') THEN
 		UPDATE entry_forms SET approve_status = 'Approved', action_date = now()
-		WHERE (entry_form_id = CAST($1 as int));
+		WHERE (entry_form_id = $1::int) AND (approve_status = 'Completed');
 		msg := 'Approved the form';
 	ELSIF ($3 = '3') THEN
 		UPDATE entry_forms SET approve_status = 'Rejected', action_date = now()
-		WHERE (entry_form_id = CAST($1 as int));
+		WHERE (entry_form_id = $1::int) AND (approve_status = 'Completed');
 		msg := 'Rejected the form';
 	END IF;
 
@@ -199,15 +199,13 @@ CREATE TRIGGER ins_sub_fields BEFORE INSERT ON sub_fields
 
 CREATE OR REPLACE FUNCTION ins_entry_forms() RETURNS trigger AS $$
 DECLARE
-	reca		RECORD;
 BEGIN
 	
-	SELECT default_values, default_sub_values INTO reca
-	FROM forms
-	WHERE (form_id = NEW.form_id);
-	
-	NEW.answer := reca.default_values;
-	NEW.sub_answer := reca.default_sub_values;
+	IF(NEW.answer is null)THEN
+		SELECT default_values INTO NEW.answer
+		FROM forms
+		WHERE (form_id = NEW.form_id);
+	END IF;
 
 	RETURN NEW;
 END;

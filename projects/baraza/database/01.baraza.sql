@@ -89,8 +89,10 @@ CREATE TABLE orgs (
 	letter_head				varchar(50),
 	email_from				varchar(120),
 	web_logos				boolean default false not null,
+	logo_path				varchar(120),
 
 	created					timestamp default current_timestamp not null,
+	password_scheme			integer default 1 not null,
 	no_of_users				integer default 1 not null,
 	system_key				varchar(64),
 	system_identifier		varchar(64),
@@ -122,7 +124,8 @@ CREATE TABLE sys_configs (
 	org_id					integer references orgs,
 	config_type_id			integer not null,
 	config_name				varchar(254) not null unique,
-	config_value			text not null
+	config_value			text not null,
+	config_amount			real
 );
 CREATE INDEX sys_configs_org_id ON sys_configs (org_id);
 
@@ -220,7 +223,8 @@ CREATE TABLE sys_files (
 	file_type				varchar(320),
 	file_size				integer,
 	narrative				varchar(320),
-	details					text
+	details					text,
+	created					timestamp default current_timestamp not null
 );
 CREATE INDEX sys_files_org_id ON sys_files (org_id);
 CREATE INDEX sys_files_table_id ON sys_files (table_id);
@@ -388,6 +392,7 @@ CREATE TABLE sys_access_entitys (
 	entity_id				integer not null references entitys,
 	org_id					integer references orgs,
 	narrative				varchar(320),
+	granted_on				timestamp default current_timestamp not null,
 	UNIQUE(sys_access_level_id, entity_id)
 );
 CREATE INDEX sys_access_entitys_sys_access_level_id ON sys_access_entitys (sys_access_level_id);
@@ -407,7 +412,7 @@ CREATE TABLE reporting (
 	ps_reporting			real,
 	details					text,
 
-	UNIQUE(entity_id, report_to_id)
+	UNIQUE(entity_id, report_to_id, reporting_level)
 );
 CREATE INDEX reporting_entity_id ON reporting(entity_id);
 CREATE INDEX reporting_report_to_id ON reporting(report_to_id);
@@ -416,6 +421,7 @@ CREATE INDEX reporting_org_id ON reporting(org_id);
 CREATE TABLE sys_logins (
 	sys_login_id			serial primary key,
 	entity_id				integer references entitys,
+	sys_app_id				integer references sys_apps,
 	login_time				timestamp default now(),
 	login_ip				varchar(64),
 	phone_serial_number		varchar(50),
@@ -423,6 +429,15 @@ CREATE TABLE sys_logins (
 	narrative				varchar(240)
 );
 CREATE INDEX sys_logins_entity_id ON sys_logins (entity_id);
+CREATE INDEX sys_logins_sys_app_id ON sys_logins (sys_app_id);
+
+CREATE TABLE sys_err_logins (
+	sys_err_login_id		serial primary key,
+	user_name				varchar(50),
+	login_time				timestamp default now(),
+	login_ip				varchar(64),
+	phone_serial_number		varchar(50)
+);
 
 CREATE TABLE sys_reset (
 	sys_reset_id			serial primary key,
@@ -468,6 +483,7 @@ CREATE TABLE sys_emailed (
 	table_name				varchar(50),
 	email_type				integer default 1 not null,
 	emailed					boolean default false not null,
+	send_status				integer default 0 not null,
 	created					timestamp default current_timestamp not null,
 	narrative				varchar(240),
 	mail_body				text
@@ -511,6 +527,7 @@ CREATE TABLE workflows (
 	table_name				varchar(64),
 	table_link_field		varchar(64),
 	table_link_id			integer,
+	auto_approve			boolean default false not null,
 	approve_email			text not null,
 	reject_email			text not null,
 	approve_file			varchar(320),
@@ -533,6 +550,7 @@ CREATE TABLE workflow_phases (
 	required_approvals		integer default 1 not null,
 	reporting_level			integer default 1 not null,
 	use_reporting			boolean default false not null,
+	approve_no_reporting	boolean default false not null,
 	advice					boolean default false not null,
 	notice					boolean default false not null,
 	phase_narrative			varchar(240) not null,
@@ -722,12 +740,12 @@ CREATE VIEW vw_org_address AS
 	FROM vw_address
 	WHERE (vw_address.table_name = 'orgs') AND (vw_address.is_default = true);
 
-CREATE VIEW vw_address_entitys AS
-	SELECT vw_address.address_id, vw_address.address_name, vw_address.table_id, vw_address.table_name,
-		vw_address.sys_country_id, vw_address.sys_country_name, vw_address.is_default,
-		vw_address.post_office_box, vw_address.postal_code, vw_address.premises, vw_address.street, vw_address.town,
-		vw_address.phone_number, vw_address.extension, vw_address.mobile, vw_address.fax, vw_address.email, 
-		vw_address.website, vw_address.disp_name
+CREATE VIEW vw_entity_address AS
+	SELECT vw_address.address_id, vw_address.address_name,
+		vw_address.sys_country_id, vw_address.sys_country_name, vw_address.table_id, vw_address.table_name,
+		vw_address.is_default, vw_address.post_office_box, vw_address.postal_code, vw_address.premises,
+		vw_address.street, vw_address.town, vw_address.phone_number, vw_address.extension, vw_address.mobile,
+		vw_address.fax, vw_address.email, vw_address.website, vw_address.disp_name
 	FROM vw_address
 	WHERE (vw_address.table_name = 'entitys') AND (vw_address.is_default = true);
 
@@ -752,15 +770,6 @@ CREATE VIEW vw_orgs AS
 		vw_org_address.org_mobile, vw_org_address.org_fax, vw_org_address.org_email, vw_org_address.org_website
 	FROM orgs INNER JOIN currency ON orgs.currency_id = currency.currency_id
 		LEFT JOIN vw_org_address ON orgs.org_id = vw_org_address.org_table_id;
-
-CREATE VIEW vw_entity_address AS
-	SELECT vw_address.address_id, vw_address.address_name,
-		vw_address.sys_country_id, vw_address.sys_country_name, vw_address.table_id, vw_address.table_name,
-		vw_address.is_default, vw_address.post_office_box, vw_address.postal_code, vw_address.premises,
-		vw_address.street, vw_address.town, vw_address.phone_number, vw_address.extension, vw_address.mobile,
-		vw_address.fax, vw_address.email, vw_address.website, vw_address.disp_name
-	FROM vw_address
-	WHERE (vw_address.table_name = 'entitys') AND (vw_address.is_default = true);
 
 CREATE VIEW vw_entity_types AS
 	SELECT use_keys.use_key_id, use_keys.use_key_name, use_keys.use_function,
@@ -816,6 +825,7 @@ CREATE VIEW vw_entity_values AS
 CREATE VIEW vw_entity_subscriptions AS
 	SELECT entity_types.entity_type_id, entity_types.entity_type_name, entity_types.entity_role,
 		entitys.entity_id, entitys.entity_name, entitys.user_name,
+		entitys.primary_email, entitys.primary_telephone,
 		entity_subscriptions.entity_subscription_id, entity_subscriptions.org_id, entity_subscriptions.details
 	FROM entity_subscriptions INNER JOIN entity_types ON entity_subscriptions.entity_type_id = entity_types.entity_type_id
 		INNER JOIN entitys ON entity_subscriptions.entity_id = entitys.entity_id;
@@ -838,6 +848,12 @@ CREATE VIEW vw_reporting AS
 		reporting.reporting_level, reporting.details
 	FROM reporting INNER JOIN entitys ON reporting.entity_id = entitys.entity_id
 		INNER JOIN entitys as rpt ON reporting.report_to_id = rpt.entity_id;
+
+CREATE VIEW vw_reporting_groups AS
+	SELECT reporting.org_id, reporting.reporting_level
+	FROM reporting
+	GROUP BY reporting.org_id, reporting.reporting_level
+	ORDER BY reporting.reporting_level;
 
 CREATE VIEW vw_e_fields AS
 	SELECT orgs.org_id, orgs.org_name,
@@ -1016,7 +1032,36 @@ CREATE VIEW tomcat_users AS
 	FROM (entity_subscriptions INNER JOIN entitys ON entity_subscriptions.entity_id = entitys.entity_id)
 		INNER JOIN entity_types ON entity_subscriptions.entity_type_id = entity_types.entity_type_id
 	WHERE entitys.is_active = true;
+	
+CREATE VIEW vw_sys_logins AS
+	SELECT entitys.entity_id, entitys.entity_name, 
+		orgs.org_id, orgs.org_name,
+		sys_apps.sys_app_id, sys_apps.sys_app_name, 
+		sys_logins.sys_login_id, sys_logins.login_time, sys_logins.login_ip, 
+		sys_logins.phone_serial_number, sys_logins.correct_login, sys_logins.narrative
+	FROM sys_logins INNER JOIN entitys ON sys_logins.entity_id = entitys.entity_id
+		INNER JOIN orgs ON entitys.org_id = orgs.org_id
+		LEFT JOIN sys_apps ON sys_logins.sys_app_id = sys_apps.sys_app_id;
+			
+CREATE VIEW vws_sys_logins AS
+	SELECT entitys.entity_id, entitys.entity_name,
+		orgs.org_id, orgs.org_name,
+		sys_apps.sys_app_id, sys_apps.sys_app_name, 
+		count(sys_logins.sys_login_id) as no_of_logins
+	FROM sys_logins INNER JOIN entitys ON sys_logins.entity_id = entitys.entity_id
+		INNER JOIN orgs ON entitys.org_id = orgs.org_id
+		LEFT JOIN sys_apps ON sys_logins.sys_app_id = sys_apps.sys_app_id
+	GROUP BY entitys.entity_id, entitys.entity_name,
+		orgs.org_id, orgs.org_name,
+		sys_apps.sys_app_id, sys_apps.sys_app_name;
 
+CREATE VIEW vws_app_logins AS
+	SELECT org_id, org_name, sys_app_name, 
+		count(entity_id) no_users, sum(no_of_logins) as no_logins
+	FROM vws_sys_logins
+	GROUP BY org_id, org_name, sys_app_name
+	ORDER BY org_name, sys_app_name;
+	
 CREATE VIEW select_yes_no AS
 	SELECT bs.column1 as select_id, bs.column2 as select_state, bs.column3 as select_value
 	FROM (VALUES (0, false, 'No'), (1, true, 'Yes')) bs;
@@ -1329,10 +1374,10 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION change_password(varchar(12), varchar(32), varchar(32)) RETURNS varchar(120) AS $$
 DECLARE
-	old_password 		varchar(64);
-	v_entity_id			integer;
-	v_pass_change		varchar(120);
-	msg					varchar(120);
+	old_password 			varchar(64);
+	v_entity_id				integer;
+	v_pass_change			varchar(120);
+	msg						varchar(120);
 BEGIN
 	msg := 'Password Error';
 	v_entity_id := $1::int;
@@ -1351,6 +1396,36 @@ BEGIN
 	END IF;
 
 	RETURN msg;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION password_check(varchar(12)) RETURNS integer AS $$
+DECLARE
+	v_org_id				integer;
+	v_password_scheme		integer;
+	v_entity_id				integer;
+	v_password_okay			integer;
+BEGIN
+
+	SELECT org_id INTO v_org_id
+	FROM entitys WHERE (entity_id = $1::int);
+
+	SELECT password_scheme INTO v_password_scheme
+	FROM orgs WHERE (org_id = v_org_id);
+
+	v_password_okay := 1;
+
+	IF (v_password_scheme = 2) THEN		---- Must change password
+		SELECT entity_id INTO v_entity_id
+		FROM entitys WHERE (entity_id = $1::int)
+		AND (first_password = md5(entity_password));
+
+		IF (v_entity_id is not null) THEN
+			v_password_okay := 2;
+		END IF;
+	END IF;
+
+	RETURN v_password_okay;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1405,7 +1480,7 @@ BEGIN
 	END IF;
 
 	IF(NEW.user_name is null)THEN
-		SELECT org_sufix || '.' || lower(trim(replace(NEW.entity_name, ' ', ''))) INTO NEW.user_name
+		SELECT lower(trim(org_sufix)) || '.' || lower(trim(replace(NEW.entity_name, ' ', ''))) INTO NEW.user_name
 		FROM orgs
 		WHERE org_id = NEW.org_id;
 	END IF;
@@ -1435,6 +1510,8 @@ BEGIN
 	IF(NEW.entity_tag is null)THEN
 		NEW.entity_tag := LPAD(NEW.entity_id::text, 5, '0');
 	END IF;
+	
+	NEW.entity_name := trim(NEW.entity_name);
 
 	RETURN NEW;
 END;
@@ -1491,7 +1568,7 @@ BEGIN
 			msg := 'Access level already granted';
 		END IF;
 	ELSIF($3 = '2')THEN
-		DELETE FROM sys_access_entitys WHERE sys_access_level_id = $1::int;
+		DELETE FROM sys_access_entitys WHERE sys_access_entity_id = $1::int;
 
 		msg := 'Revoked access level';
 		
@@ -1517,6 +1594,11 @@ BEGIN
 		WHERE (sys_access_levels.org_id = v_org_id) AND (ea.sys_access_level_id is null);
 		
 		msg := 'Added all access rights to user';
+	ELSIF($3 = '5')THEN
+		DELETE FROM sys_access_entitys
+		WHERE (sys_access_level_id = $1::int);
+
+		msg := 'Removed access level to all active staff';
 	END IF;
 
 	RETURN msg;
@@ -1621,7 +1703,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE FUNCTION Emailed(integer, varchar(64)) RETURNS void AS $$
-	UPDATE sys_emailed SET emailed = true WHERE (sys_emailed_id = CAST($2 as int));
+	UPDATE sys_emailed SET emailed = true WHERE (sys_emailed_id = $2::int);
 $$ LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION get_et_field_name(integer) RETURNS varchar(120) AS $$
@@ -1649,16 +1731,58 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION err_sys_login(varchar(120), varchar(120)) RETURNS varchar(120) AS $$
+BEGIN
+	INSERT INTO sys_err_logins (user_name, login_ip)
+	VALUES ($1, $2);
+
+	return 'done';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION add_sys_login(varchar(64), varchar(64), int, boolean) RETURNS integer AS $$
+DECLARE
+	v_sys_login_id			integer;
+	v_entity_id				integer;
+BEGIN
+	SELECT entity_id INTO v_entity_id
+	FROM entitys WHERE user_name = $1;
+	
+	IF($4 = true)THEN
+		SELECT sys_login_id INTO v_sys_login_id
+		FROM sys_logins
+		WHERE (login_time::date = current_date) AND (entity_id = v_entity_id)
+			AND (sys_app_id = $3);
+	END IF;
+	
+	IF((v_entity_id is not null) AND (v_sys_login_id is null))THEN
+		v_sys_login_id := nextval('sys_logins_sys_login_id_seq');
+
+		INSERT INTO sys_logins (sys_login_id, entity_id, login_ip, sys_app_id)
+		VALUES (v_sys_login_id, v_entity_id, $2, $3);
+	END IF;
+
+	UPDATE entitys SET last_login = current_timestamp
+	WHERE (entity_id = v_entity_id);
+
+	return v_sys_login_id;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION upd_action() RETURNS trigger AS $$
 DECLARE
 	v_column_name			varchar;
 	v_workflow_narrative	varchar(240);
 	v_entered_by			integer;
+	v_entity_id				integer;
 	wfid					integer;
-	reca					record;
+	reca					RECORD;
+	recb					RECORD;
 	tbid					integer;
 	iswf					boolean;
 	add_flow				boolean;
+	v_reporting_count		integer;
+	v_min_level				integer;
 BEGIN
 	add_flow := false;
 	IF(TG_OP = 'INSERT')THEN
@@ -1674,16 +1798,20 @@ BEGIN
 	IF(add_flow = true)THEN
 		wfid := nextval('workflow_table_id_seq');
 		NEW.workflow_table_id := wfid;
+		v_entity_id := NEW.entity_id;
 
 		SELECT column_name INTO v_column_name
 		FROM information_schema.columns
 		WHERE table_name = TG_TABLE_NAME AND column_name = 'workflow_narrative';
 		IF(v_column_name is not null)THEN v_workflow_narrative := NEW.workflow_narrative; ELSE v_workflow_narrative := ''; END IF;
-		
+
 		SELECT column_name INTO v_column_name
 		FROM information_schema.columns
 		WHERE table_name = TG_TABLE_NAME AND column_name = 'entered_by';
 		IF(v_column_name is not null)THEN v_entered_by := NEW.entered_by; ELSE v_entered_by := NEW.entity_id; END IF;
+		IF(v_column_name is not null)THEN
+			IF(v_entity_id is null)THEN v_entity_id := NEW.entered_by; END IF;
+		END IF;
 
 		IF(TG_OP = 'UPDATE')THEN
 			IF(OLD.workflow_table_id is not null)THEN
@@ -1692,9 +1820,10 @@ BEGIN
 			END IF;
 		END IF;
 
-		FOR reca IN SELECT workflows.workflow_id, workflows.table_name, workflows.table_link_field, workflows.table_link_id, workflows.org_id
+		FOR reca IN SELECT workflows.workflow_id, workflows.table_name, workflows.table_link_field,
+			workflows.table_link_id, workflows.org_id, workflows.auto_approve
 		FROM workflows INNER JOIN entity_subscriptions ON workflows.source_entity_id = entity_subscriptions.entity_type_id
-		WHERE (workflows.table_name = TG_TABLE_NAME) AND (entity_subscriptions.entity_id = NEW.entity_id) LOOP
+		WHERE (workflows.table_name = TG_TABLE_NAME) AND (entity_subscriptions.entity_id = v_entity_id) LOOP
 			iswf := true;
 			IF(reca.table_link_field is null)THEN
 				iswf := true;
@@ -1709,24 +1838,54 @@ BEGIN
 				END IF;
 			END IF;
 
+			IF(reca.auto_approve = true)THEN
+				NEW.approve_status := 'Approved';
+				iswf := false;
+			END IF;
+
 			IF(iswf = true)THEN
 				INSERT INTO approval_lists (workflow_id, entity_id, entered_by, org_id, table_name, table_id, approve_status)
-				VALUES (reca.workflow_id, NEW.entity_id, v_entered_by, reca.org_id, TG_TABLE_NAME, wfid, 'Completed');
-				
+				VALUES (reca.workflow_id, v_entity_id, v_entered_by, reca.org_id, TG_TABLE_NAME, wfid, 'Completed');
+
 				INSERT INTO approvals (org_id, workflow_phase_id, table_name, table_id, org_entity_id,
 					escalation_days, escalation_hours, approval_level,
 					approval_narrative, to_be_done)
-				SELECT org_id, workflow_phase_id, TG_TABLE_NAME, wfid, NEW.entity_id,
+				SELECT org_id, workflow_phase_id, TG_TABLE_NAME, wfid, v_entity_id,
 					escalation_days, escalation_hours, approval_level,
 					(CASE WHEN phase_narrative is null THEN v_workflow_narrative
 						ELSE phase_narrative || ' - ' || v_workflow_narrative END),
 					'Approve - ' || COALESCE(phase_narrative, '')
 				FROM vw_workflow_entitys
-				WHERE (table_name = TG_TABLE_NAME) AND (entity_id = NEW.entity_id) AND (workflow_id = reca.workflow_id)
+				WHERE (table_name = TG_TABLE_NAME) AND (entity_id = v_entity_id) AND (workflow_id = reca.workflow_id)
 				ORDER BY approval_level, workflow_phase_id;
 
 				UPDATE approvals SET approve_status = 'Completed'
 				WHERE (table_id = wfid) AND (approval_level = 1);
+
+				SELECT approvals.org_id, approvals.approval_id, approvals.org_id, approvals.table_name, approvals.table_id,
+					approvals.approval_level, approvals.review_advice, approvals.org_entity_id,
+					workflow_phases.workflow_phase_id, workflow_phases.workflow_id, workflow_phases.return_level,
+					workflow_phases.reporting_level, workflow_phases.use_reporting, workflow_phases.approve_no_reporting
+				INTO recb
+				FROM approvals INNER JOIN workflow_phases ON approvals.workflow_phase_id = workflow_phases.workflow_phase_id
+				WHERE (approvals.table_id = wfid) AND (workflow_phases.approval_level = 1);
+
+				SELECT count(reporting_id) INTO v_reporting_count
+				FROM reporting
+				WHERE (entity_id = recb.org_entity_id) AND (reporting_level = recb.reporting_level);
+				IF(v_reporting_count is null)THEN v_reporting_count := 0; END IF;
+
+				IF((recb.use_reporting = true) AND (recb.approve_no_reporting = true) AND (v_reporting_count = 0))THEN
+					UPDATE approvals SET approve_status = 'Approved'
+					WHERE (table_id = wfid) AND (approval_level = 1);
+
+					SELECT min(approval_level) INTO v_min_level
+					FROM approvals
+					WHERE (table_id = wfid) AND (approve_status = 'Draft');
+
+					UPDATE approvals SET approve_status = 'Completed'
+					WHERE (table_id = wfid) AND (approval_level = v_min_level);
+				END IF;
 			END IF;
 		END LOOP;
 	END IF;
@@ -1734,7 +1893,6 @@ BEGIN
 	RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
 
 CREATE OR REPLACE FUNCTION ins_approvals() RETURNS trigger AS $$
 DECLARE
@@ -1760,18 +1918,41 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER ins_approvals BEFORE INSERT ON approvals
     FOR EACH ROW EXECUTE PROCEDURE ins_approvals();
 
+
 CREATE OR REPLACE FUNCTION upd_approvals() RETURNS trigger AS $$
 DECLARE
-	reca				RECORD;
-	wfid				integer;
-	v_org_id			integer;
-	v_notice			boolean;
-	v_advice			boolean;
+	reca								RECORD;
+	wfid								integer;
+	v_org_id							integer;
+	v_notice							boolean;
+	v_advice							boolean;
+	v_reporting_level					integer;
+	v_use_reporting						boolean;
+	v_approve_no_reporting				boolean;
+	v_reporting_count					integer;
+	v_sys_email_id						integer;
 BEGIN
 
-	SELECT notice, advice, org_id INTO v_notice, v_advice, v_org_id
+	SELECT notice, advice, org_id, reporting_level, use_reporting, approve_no_reporting
+		INTO v_notice, v_advice, v_org_id, v_reporting_level, v_use_reporting, v_approve_no_reporting
 	FROM workflow_phases
 	WHERE (workflow_phase_id = NEW.workflow_phase_id);
+
+	IF((NEW.approve_status = 'Completed') AND (v_use_reporting = true) AND (v_approve_no_reporting = false))THEN
+		SELECT count(reporting_id) INTO v_reporting_count
+		FROM reporting
+		WHERE (entity_id = NEW.org_entity_id) AND (reporting_level = v_reporting_level);
+		IF(v_reporting_count is null)THEN v_reporting_count := 0; END IF;
+
+		IF(v_reporting_count = 0)THEN			---- raise an escalation email
+			SELECT sys_email_id INTO v_sys_email_id
+			FROM sys_emails WHERE (use_type = 65) AND (org_id = v_org_id);
+			IF(v_sys_email_id is not null)THEN
+				INSERT INTO sys_emailed (sys_email_id, table_id, table_name, email_type, org_id)
+				VALUES (v_sys_email_id, NEW.approval_id, 'approvals', 65, v_org_id);
+			END IF;
+		END IF;
+	END IF;
 
 	IF(TG_OP = 'INSERT')THEN
 		IF (NEW.approve_status = 'Completed') THEN
@@ -1818,18 +1999,22 @@ CREATE TRIGGER upd_approvals AFTER INSERT OR UPDATE ON approvals
 
 CREATE OR REPLACE FUNCTION upd_approvals(varchar(12), varchar(12), varchar(12), varchar(12)) RETURNS varchar(120) AS $$
 DECLARE
-	app_id		Integer;
-	reca 		RECORD;
-	recb		RECORD;
-	recc		RECORD;
-	min_level	Integer;
-	mysql		varchar(240);
-	msg 		varchar(120);
+	app_id						integer;
+	min_level					integer;
+	v_reporting_count			integer;
+	v_min_level					integer;
+	reca 						RECORD;
+	recb						RECORD;
+	recc						RECORD;
+	recd						RECORD;
+	mysql						varchar(240);
+	msg 						varchar(120);
 BEGIN
 	app_id := CAST($1 as int);
 	SELECT approvals.org_id, approvals.approval_id, approvals.org_id, approvals.table_name, approvals.table_id,
 		approvals.approval_level, approvals.review_advice, approvals.org_entity_id,
-		workflow_phases.workflow_phase_id, workflow_phases.workflow_id, workflow_phases.return_level INTO reca
+		workflow_phases.workflow_phase_id, workflow_phases.workflow_id, workflow_phases.return_level
+	INTO reca
 	FROM approvals INNER JOIN workflow_phases ON approvals.workflow_phase_id = workflow_phases.workflow_phase_id
 	WHERE (approvals.approval_id = app_id);
 
@@ -1857,8 +2042,9 @@ BEGIN
 			|| ', action_date = now()'
 			|| ' WHERE workflow_table_id = ' || reca.table_id;
 			EXECUTE mysql;
-			
-			UPDATE approval_lists SET action_date = current_timestamp, approve_status = 'Approved' WHERE table_id = reca.table_id;
+
+			UPDATE approval_lists SET action_date = current_timestamp, approve_status = 'Approved'
+			WHERE table_id = reca.table_id;
 
 			INSERT INTO sys_emailed (org_id, table_id, table_name, email_type)
 			VALUES (reca.org_id, reca.table_id, 'vw_workflow_approvals', 1);
@@ -1872,13 +2058,36 @@ BEGIN
 				END IF;
 			END LOOP;
 		ELSE
-			FOR recb IN SELECT workflow_phase_id, advice, notice
+			FOR recb IN SELECT workflow_phase_id, advice, notice, reporting_level, use_reporting, approve_no_reporting
 			FROM workflow_phases
 			WHERE (workflow_id = reca.workflow_id) AND (approval_level <= min_level) LOOP
+				SELECT count(reporting_id) INTO v_reporting_count
+				FROM reporting
+				WHERE (entity_id = reca.org_entity_id) AND (reporting_level = recb.reporting_level);
+				IF(v_reporting_count is null)THEN v_reporting_count := 0; END IF;
+
 				IF (recb.advice = true) or (recb.notice = true) THEN
 					UPDATE approvals SET approve_status = 'Approved', action_date = now(), completion_date = now()
 					WHERE (workflow_phase_id = recb.workflow_phase_id)
 						AND (approve_status = 'Draft') AND (table_id = reca.table_id);
+
+					SELECT min(approval_level) INTO v_min_level
+					FROM approvals
+					WHERE (table_id = reca.table_id) AND (approve_status = 'Draft');
+
+					UPDATE approvals SET approve_status = 'Completed'
+					WHERE (table_id = wfid) AND (approval_level = v_min_level);
+				ELSIF((recb.use_reporting = true) AND (recb.approve_no_reporting = true) AND (v_reporting_count = 0))THEN
+					UPDATE approvals SET approve_status = 'Approved', action_date = now(), completion_date = now()
+					WHERE (workflow_phase_id = recb.workflow_phase_id)
+						AND (approve_status = 'Draft') AND (table_id = reca.table_id);
+
+					SELECT min(approval_level) INTO v_min_level
+					FROM approvals
+					WHERE (table_id = reca.table_id) AND (approve_status = 'Draft');
+
+					UPDATE approvals SET approve_status = 'Completed'
+					WHERE (table_id = wfid) AND (approval_level = v_min_level);
 				ELSE
 					UPDATE approvals SET approve_status = 'Completed', completion_date = now()
 					WHERE (workflow_phase_id = recb.workflow_phase_id)
@@ -1895,7 +2104,7 @@ BEGIN
 		|| ', action_date = now()'
 		|| ' WHERE workflow_table_id = ' || reca.table_id;
 		EXECUTE mysql;
-		
+
 		UPDATE approval_lists SET action_date = current_timestamp, approve_status = 'Rejected' WHERE table_id = reca.table_id;
 
 		INSERT INTO sys_emailed (table_id, table_name, email_type, org_id)
@@ -1909,7 +2118,7 @@ BEGIN
 		|| ', action_date = now()'
 		|| ' WHERE workflow_table_id = ' || reca.table_id;
 		EXECUTE mysql;
-		
+
 		UPDATE approval_lists SET action_date = current_timestamp, approve_status = 'Review' WHERE table_id = reca.table_id;
 
 		msg := 'Forwarded to owner for review';
@@ -2030,6 +2239,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION get_workflow_narrative(varchar(64), integer) RETURNS text AS $$
+DECLARE
+	msg 		text;
+BEGIN
+
+	msg := '';
+
+
+	RETURN msg;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION get_default_country(int) RETURNS char(2) AS $$
 	SELECT default_country_id::varchar(2)
 	FROM orgs
@@ -2114,6 +2335,25 @@ $$ LANGUAGE SQL;
 CREATE OR REPLACE FUNCTION get_excel_date(excel_date integer) RETURNS date AS $$
    SELECT '1899-12-31'::date + excel_date;
 $$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION get_excel_timestamp(varchar(50)) RETURNS timestamp AS $$
+DECLARE
+	ans					timestamp;
+	v_date_time			real;
+	v_date				integer;
+	v_time				integer;
+BEGIN
+
+	v_date_time := $1::real;
+	v_date := trunc(v_date_time);
+	v_time := 24 * 60 * 60 * 1000 * (v_date_time - v_date);
+
+	ans := '1899-12-31'::date + v_date;
+	ans := ans + (v_time::varchar || ' milliseconds')::interval;
+
+	RETURN ans;
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION amount_in_words(n BIGINT) RETURNS TEXT AS $$
 DECLARE
@@ -2245,5 +2485,5 @@ SELECT pg_catalog.setval('entity_types_entity_type_id_seq', 6, true);
 
 INSERT INTO entitys (entity_id, org_id, entity_type_id, use_key_id, sys_language_id, user_name, entity_name, primary_email, entity_leader, super_user, no_org, first_password) VALUES
 (0, 0, 0, 0, 0, 'root', 'root', 'root@localhost', true, true, false, 'baraza'),
-(1, 0, 6, 6, 0, 'repository', 'repository', 'repository@localhost', true, false, false, 'baraza');
+(1, 0, 0, 0, 0, 'repository', 'repository', 'repository@localhost', true, false, false, 'baraza');
 SELECT pg_catalog.setval('entitys_entity_id_seq', 1, true);
